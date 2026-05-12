@@ -1,0 +1,1136 @@
+"""
+Working Memory Network Model
+==============
+
+Network class to instantiate and administer instances of the
+working memory model by Mongillo et al. (2018).
+
+"""
+
+import numpy as np
+import random
+import matplotlib.pyplot as plt
+import nest
+import os
+import shutil
+import sys
+import json
+import pandas as pd
+import time
+from copy import deepcopy
+from model.default_params import default_network_params, default_simulation_params
+from model.default_params import update_params, check_params
+from model.model_helpers import get_weight, noise_params, get_rate_and_weight_poisson, lognormal_params
+
+
+
+class STDPModel:
+    def __init__(self, network_spec:dict, sim_spec:dict):
+        """
+        STDP Model class.
+        An instance of the model with the given parameters.
+
+        Args:
+            network_spec (dict): specifies the network to be simulated. The parameters defined
+                in the dictionary overwrite the default parameters defined in
+                default_params.py.
+            sim_spec (dict): specifies simulation and recording parameters. The parameters defined
+                in the dictionary overwrite the default parameters defined in
+                default_params.py.
+            
+        """
+        # dictionaries set up
+        self.network_params = deepcopy(default_network_params)
+        if isinstance(network_spec, dict):
+            print("Initializing network with custom parameters.")
+            check_params(network_spec, self.network_params)
+            self.network_custom_params = network_spec
+            update_params(self.network_params, self.network_custom_params)
+            #print("Used parameters: ", self.network_params)
+        else:
+            raise TypeError("network_spec must be a dict.")
+        
+        self.simulation_params = deepcopy(default_simulation_params)
+        if isinstance(sim_spec, dict):
+            print("Initializing simulation with custom parameters.")
+            check_params(sim_spec, self.simulation_params)
+            self.simulation_custom_params = sim_spec
+            update_params(self.simulation_params, self.simulation_custom_params)
+            #print("Used parameters: ", self.simulation_params)
+        else:
+            raise TypeError("sim_spec must be a dict.")
+        
+        self.simulation_params = deepcopy(default_simulation_params)
+        if isinstance(sim_spec, dict):
+            print("Initializing simulation with custom parameters.")
+            check_params(sim_spec, self.simulation_params)
+            self.simulation_custom_params = sim_spec
+            update_params(self.simulation_params, self.simulation_custom_params)
+            #print("Used parameters: ", self.simulation_params)
+        else:
+            raise TypeError("sim_spec must be a dict.")
+        
+        self.data_path = self.simulation_params["data_path"]        
+        if os.path.isdir(self.simulation_params["data_path"]):
+            if(self.simulation_params['overwrite_files']==False):
+                print("Data directory already exists and cannot be overwritten.\nPlease remove the folder %s" % self.data_path)
+                sys.exit()
+            if(self.simulation_params['overwrite_files']==True):
+                ow = input("Data directory {} will be overwritten. Press any key to continue.".format(self.data_path))
+                shutil.rmtree(self.simulation_params['data_path'])
+                os.mkdir(self.simulation_params['data_path'])
+        else:
+            os.mkdir(self.simulation_params['data_path'])
+            print('Data directory created.')
+        print('Data will be written to %s' % self.data_path)
+        
+        self.c = self.network_params["c"]
+        self.p = self.network_params["p"]
+        self.f = self.network_params["f"]
+        
+
+    def print_params(self):
+        """
+        Prints the dictionaries of network and simulations parameters.
+
+        """
+        print("Network parameters dict:", self.network_params)
+        print("Simulation parameters dict:", self.simulation_params)
+
+
+    def save_params(self):
+        """
+        Saves network and simulation dicts in json files.
+
+        """
+        print("Writing dict params to file...", end = " ")
+        with open(self.simulation_params['data_path'] + "network_params.json", 'w') as fp:
+            json.dump(self.network_params, fp)
+        with open(self.simulation_params['data_path'] + "simulation_params.json", 'w') as fp:
+            json.dump(self.simulation_params, fp)
+        
+        print("Done")
+
+
+    def save_spike_data(self):
+        """
+        Saves spike data in files named 'spikedataX.dat' where X is the pop recorded id
+        (i.e. the id of the excitatory selective sub-population)
+
+        """
+
+        if(self.simulation_params["recording_params"]["save_to_file"]):
+            for i, sr in enumerate(self.spike_recorders):
+                fn = "spikedata" + str(self.simulation_params["recording_params"]["pop_recorded"][i])+".dat"
+                spikes = np.array([sr.get("events")["senders"], sr.get("events")["times"]])
+                spikes = spikes.T
+                np.savetxt(self.simulation_params['data_path'] + fn, spikes)
+
+    
+    def save_weights(self, time:float=0.0):
+        """
+        Saves synaptic weights in a single file named 'weights_timeX.dat'.
+        
+        Args:
+            time (float): time at which the weights are saved (in ms).
+        """
+
+        fraction = self.simulation_params["recording_params"]["fraction_weights_recorded"]
+
+        if time is not None:
+            filepath = self.simulation_params['data_path'] + "weights_" + str(time) + ".dat"
+        else:
+            filepath = self.simulation_params['data_path'] + "final_weights.dat"
+
+        with open(filepath, 'w') as f:
+            for i in range(self.p):
+                
+                # Calculate how many neurons to sample based on the fraction
+                pop_i = self.exc_populations[i]
+                n_neuroni = int(len(pop_i) * fraction)
+                
+                # Take only a 'slice' of the source population
+                sampled_source = pop_i[0 : n_neuroni] 
+                
+                for j in range(self.p):
+                    f.write("weights_selective_pop{}_to_selective_pop{}\n".format(i, j))
+                    conns = nest.GetConnections(sampled_source, self.exc_populations[j], synapse_model="stdp_synapse_rec")
+                    
+                    w = conns.get("weight")
+                    np.savetxt(f, [w], fmt='%.4f', delimiter=' ')
+
+                # From Non-selective population to Selective population I (Sample the Non-selective)
+                f.write("weights_nonselective_pop_to_selective_pop{}\n".format(i))
+                pop_non_sel = self.exc_populations[-1]
+                sampled_source_non_sel = pop_non_sel[0 : int(len(pop_non_sel) * fraction)]
+                
+                conns = nest.GetConnections(sampled_source_non_sel, self.exc_populations[i], synapse_model="stdp_synapse_rec")
+                w = conns.get("weight")
+                np.savetxt(f, [w], fmt='%.4f', delimiter=' ')
+
+                # From Selective population I to Non-selective population
+                f.write("weights_selective_pop{}_to_nonselective_pop\n".format(i))
+                conns = nest.GetConnections(sampled_source, self.exc_populations[-1], synapse_model="stdp_synapse_rec")
+                w = conns.get("weight")
+                np.savetxt(f, [w], fmt='%.4f', delimiter=' ')
+
+            # From Non-selective population to Non-selective population
+            f.write("weights_nonselective_pop_to_nonselective_pop\n")
+            conns = nest.GetConnections(sampled_source_non_sel, self.exc_populations[-1], synapse_model="stdp_synapse_rec")
+            w = conns.get("weight")
+            np.savetxt(f, [w], fmt='%.4f', delimiter=' ')
+
+    def add_background_input(self, start:float=0.0, stop:float=1000.0):
+        """
+        Add backround input to the network using the parameters previously given.
+
+        Args:
+            start (float): stimulus start (in ms).
+            stop (float): stimulus stop (in ms).
+
+        """
+
+        background_input = {
+            'start': start,
+            'stop': stop
+        }
+        print("\n ##### NETWORK INPUTS #####\n")
+        print("Background input added:\nStart [ms]: {}\nStop [ms]: {}\neta_exc [mV]: {}\neta_inh [mv]: {}".format(start, stop, self.network_params["eta_exc"], self.network_params["eta_inh"]))
+
+        self.network_params.update({'background_input': background_input})
+
+
+    def add_item_loading_signals(self, pop_id:list=[0], origin:list=[1000.0]):
+        """
+        Add item loading signal to the pop_id-th excitatory population using the parameters previously given.
+
+        Args:
+            pop_id (list of int): population ID to which the items are loaded.
+            origin (list of float): the origin of the item loading stimulations (in ms).
+
+        """
+
+        if(len(pop_id) != len(origin)):
+            raise ValueError("pop_id and origin must have the same dimension.")
+        if(not all(isinstance(x, int) for x in pop_id)):
+            raise TypeError("List must contain only integers.")
+        if(not all(isinstance(x, float) for x in origin)):
+            raise TypeError("List must contain only floats.")
+
+        else:
+            item_loading = {
+                'nstim': len(pop_id) ,
+                'pop_id': pop_id,
+                'origin': origin
+                }
+
+            self.network_params.update({'item_loading': item_loading})
+        
+        print("\nItems loading:")
+        for i in range(len(pop_id)):
+            print("Item loaded to sub-population {} at {} ms.".format(pop_id[i], origin[i]))
+
+    def add_item_loading_signals_mip(self, pop_id:list=[0], origin:list=[1000.0]):
+        """
+        Add item loading signal to the pop_id-th excitatory population using the parameters previously given.
+        The item loading signal is generated by a MIP generator.
+
+        Args:
+            pop_id (list of int): population ID to which the items are loaded.
+            origin (list of float): the origin of the item loading stimulations (in ms).
+
+        """
+
+        if(len(pop_id) != len(origin)):
+            raise ValueError("pop_id and origin must have the same dimension.")
+        if(not all(isinstance(x, int) for x in pop_id)):
+            raise TypeError("List must contain only integers.")
+        if(not all(isinstance(x, float) for x in origin)):
+            raise TypeError("List must contain only floats.")
+
+        else:
+            item_loading_mip = {
+                'nstim': len(pop_id) ,
+                'pop_id': pop_id,
+                'origin': origin
+                }
+
+            self.network_params.update({'item_loading_mip': item_loading_mip})
+        
+        print("\nItems loading with MIP generator:")
+        for i in range(len(pop_id)):
+            print("Item loaded (mip_generator) to sub-population {} at {} ms.".format(pop_id[i], origin[i]))
+
+    def add_nonspecific_readout_signal(self, origin:list=[2000.0]):
+        """
+        Add nonspecific readout signal to the whole excitatory population using the parameters previously given.
+
+        Args:
+            origin (list of float): the origin of the nonspecific stimulations (in ms).
+
+        """
+
+        if(not all(isinstance(x, float) for x in origin)):
+            raise TypeError("List must contain only floats.")
+
+        nonspecific_readout_signal = {
+            'nstim' : len(origin),
+            'origin' : origin
+        }
+
+
+        self.network_params.update({'nonspecific_readout_signals': nonspecific_readout_signal})
+        
+        print("\nNonspecific readout signals:")
+        for i in range(len(origin)):
+            print("Nonspecific readout signal added at {} ms.".format(origin[i]))
+
+
+    def add_random_nonspecific_noise(self, origin:list=[1500.0], frac:float=0.15):
+        """
+        Add random nonspecific noise signal to a fraction of the excitatory population using the parameters previously given.
+
+        Args:
+            origin : list of float
+                The origin of the item loading stimulations (in ms).
+            frac : float
+                Fraction of excitatory neurons simulated by the stimulus.
+
+        """
+        
+        if(not all(isinstance(x, float) for x in origin)):
+            raise TypeError("List must contain only floats.")
+
+        nonspecific_noise = {
+            'nstim' : len(origin),
+            'origin': origin,
+            'frac' : frac
+        }
+
+        print("\nNonspecific noise signals:")
+        for i in range(len(origin)):
+            print("Nonspecific noise signal added at {} ms.\n".format(origin[i]))
+
+        self.network_params.update({'nonspecific_noise': nonspecific_noise})
+
+    
+    def add_periodic_sequence(self, intervals:list=[[1000.0, 1500.0]]):
+        """
+        Add nonspecific signal-like periodic sequence to the excitatory population. 
+        Similar to the nonspecific readout signal, it is shorter in time.
+
+        Args
+            intervals : list containing the beginning and the end of each periodic stimuli
+            in list form. The times muct be floats.
+        """
+
+        if not all(isinstance(x, float) for sublist in intervals for x in sublist):
+            raise TypeError("All elements must be floats.")
+
+        times = []
+        for i in range(len(intervals)):
+            t0 = intervals[i][0]
+            t1 = intervals[i][1]
+            nstim = int((t1-t0)/self.network_params["stimulation_params"]["period"]) + 1
+            for n in range(nstim):
+                times.append(t0+n*self.network_params["stimulation_params"]["period"])
+
+        periodic_sequence = {
+            'times': times
+        }
+
+        print("\nPeriodic sequences:")
+        print("Periodic sequences added at {} ms.\n".format(times))
+
+        self.network_params.update({'periodic_sequence': periodic_sequence})
+    
+    
+    def prepare_nest(self):
+        """
+        Prepare NEST Kernel.
+
+        """
+        nest.ResetKernel()
+        nest.SetKernelStatus({"print_time" : True,
+                              "resolution": self.simulation_params["dt"],
+                              "rng_seed": self.simulation_params["master_seed"],
+                              "local_num_threads": self.simulation_params["threads"]})
+        
+        # create the weight recorder to record the synaptic weights of the STDP synapses
+        wr = nest.Create("weight_recorder")
+        synapse_model_name = "stdp_synapse"
+        nest.CopyModel(synapse_model_name, "stdp_synapse_rec", {"weight_recorder": wr})
+
+    
+    def create_populations(self):
+        """
+        Creates neuron populations.
+
+        """
+        print("Creating neuron populations...", end = ' ')
+
+        # list of exc sub-populations
+        self.exc_populations = []
+
+        # whole exc neurons
+        self.exc_population = nest.Create("iaf_psc_exp", self.network_params["N_exc"])
+        nest.SetStatus(self.exc_population, {"tau_m": self.network_params["neur_params"]["tau"][0],
+                                             "t_ref": self.network_params["neur_params"]["t_ref"][0],
+                                             "V_th": self.network_params["neur_params"]["V_th"][0],
+                                             "V_reset": self.network_params["neur_params"]["V_reset"][0],
+                                             "E_L": self.network_params["neur_params"]["E_L"][0],
+                                             "V_m": self.network_params["neur_params"]["V_m"][0],
+                                             "tau_minus": self.network_params["stdp_params"]["tau_minus"]})
+        
+        #whole inh neurons
+        self.inh_population = nest.Create("iaf_psc_exp", self.network_params["N_inh"])
+        nest.SetStatus(self.inh_population, {"tau_m" : self.network_params["neur_params"]["tau"][1],
+                                             "t_ref" : self.network_params["neur_params"]["t_ref"][1],
+                                             "V_th" : self.network_params["neur_params"]["V_th"][1],
+                                             "V_reset" : self.network_params["neur_params"]["V_reset"][1],
+                                             "E_L" : self.network_params["neur_params"]["E_L"][1],
+                                             "V_m" : self.network_params["neur_params"]["V_m"][1],
+                                             "tau_minus": self.network_params["stdp_params"]["tau_minus"]})
+        
+        
+        if(self.network_params["overlap"]):
+            # subpopulations chosen randomly
+            pop_index = np.arange(self.network_params["N_exc"])
+            # here we collect all the id of neurons belonging to selective populations
+            selective_pop_ids = []
+            for i in range(self.p):
+                #print("Getting selective population {}".format(i))
+                pop_id_dum = pop_index
+                ids = []
+                for j in range(int(self.f*self.network_params["N_exc"])):
+                    id = int(random.choice(pop_id_dum))
+                    selective_pop_ids.append(id)
+                    ids.append(id)
+                    # delete the id to avoid repetition within the same selective population
+                    pop_id_dum = np.delete(pop_id_dum, np.where(pop_id_dum==id))
+                dum = self.exc_population[np.sort(ids)]
+                self.exc_populations.append(dum)
+            
+            # collect the ids of neurons belonging to selective populaitons
+            sel_ids = np.zeros((int(self.f*self.network_params["N_exc"]), self.p))
+            #sel_ids = [selective_pop_ids[i*int(self.f*self.network_params["N_exc"]):(i+1)*int(self.f*self.network_params["N_exc"])] for i in range(self.p)]
+            for i in range(self.p):
+                sel_ids[:,i] = selective_pop_ids[i*int(self.f*self.network_params["N_exc"]):(i+1)*int(self.f*self.network_params["N_exc"])]
+            # the ids not present in selective_pop_ids go to the non-selective population
+            ids = list(set(selective_pop_ids))
+            nonselec_ids = pop_index
+            for i in ids:
+                nonselec_ids = np.delete(nonselec_ids, np.where(nonselec_ids==i))
+            dum = self.exc_population[np.sort(nonselec_ids)]
+            self.exc_populations.append(dum)
+
+            if(self.simulation_params["recording_params"]["save_to_file"]):
+                np.savetxt(self.simulation_params['data_path'] + "selective_pop_ids.dat", sel_ids)
+                    
+        else:
+            pop_index = 0
+            for i in range(self.p):
+                dum = self.exc_population[pop_index:pop_index+int(self.f*self.network_params["N_exc"])]
+                pop_index += int(self.f*self.network_params["N_exc"])
+                self.exc_populations.append(dum)
+                
+            self.exc_populations.append(self.exc_population[pop_index:self.network_params["N_exc"]])
+        
+        print("Done")
+    
+
+    def create_background_input(self):
+        """
+        Computes the non-specific background input for the network.
+
+        Returns exc_bkg_input and inh_bkg_input, lists containing respectively
+        the stimulation devices for excitatory and inhibitory populations.
+
+        """
+
+        eta_exc = self.network_params["eta_exc"]
+        eta_inh = self.network_params["eta_inh"]
+        eta_exc_end = self.network_params["eta_exc_end"]
+        Sigma_exc = self.network_params["Sigma_exc"]
+        Sigma_inh = self.network_params["Sigma_inh"]
+        start = self.network_params["background_input"]["start"]
+        stop = self.network_params["background_input"]["stop"]
+
+
+        if(self.network_params["poisson_bkg"]["allow"]):
+            mean_I_ext_exc, stdI_ext_exc = noise_params(eta_exc, Sigma_exc, self.network_params["neur_params"]["tau"][0], dt=self.network_params["stimulation_params"]["dt_external_stim"])
+            rate_ex, _ = get_rate_and_weight_poisson(eta_exc, Sigma_exc, self.network_params["neur_params"]["tau"][0])
+            ng_exc_E = nest.Create("poisson_generator")
+            nest.SetStatus(ng_exc_E, {"rate" : rate_ex,
+                                  "start" : start,
+                                  "stop" : stop})
+
+            mean_I_ext_inh, stdI_ext_inh = noise_params(eta_inh, Sigma_inh, self.network_params["neur_params"]["tau"][1], dt=self.network_params["stimulation_params"]["dt_external_stim"])
+            rate_in, _ = get_rate_and_weight_poisson(eta_inh, Sigma_inh, self.network_params["neur_params"]["tau"][1])
+            ng_inh_I = nest.Create("poisson_generator")
+            nest.SetStatus(ng_inh_I, {"rate" : rate_in,
+                                  "start" : start,
+                                  "stop" : stop})
+            print("Background input: rate exc {} Hz, rate inh {} Hz".format(rate_ex, rate_in))
+        else:
+            mean_I_ext_exc, stdI_ext_exc = noise_params(eta_exc, Sigma_exc, self.network_params["neur_params"]["tau"][0], dt=self.network_params["stimulation_params"]["dt_external_stim"])
+
+            ng_exc_E = nest.Create("noise_generator")
+            nest.SetStatus(ng_exc_E, {"mean" : mean_I_ext_exc,
+                                    "std" : stdI_ext_exc,
+                                    "dt" : self.network_params["stimulation_params"]["dt_external_stim"],
+                                    "start" : start,
+                                    "stop" : stop})
+
+            mean_I_ext_inh, stdI_ext_inh = noise_params(eta_inh, Sigma_inh, self.network_params["neur_params"]["tau"][1], dt=self.network_params["stimulation_params"]["dt_external_stim"])
+            
+            ng_inh_I = nest.Create("noise_generator")
+            nest.SetStatus(ng_inh_I, {"mean" : mean_I_ext_inh,
+                                    "std" : stdI_ext_inh,
+                                    "dt" : self.network_params["stimulation_params"]["dt_external_stim"],
+                                    "start" : start,
+                                    "stop" : stop})
+
+        mean_I_ext_exc_end, stdI_ext_exc_end = noise_params(eta_exc_end, 0.0, self.network_params["neur_params"]["tau"][1], dt=self.network_params["stimulation_params"]["dt_external_stim"])
+
+        ng_offset = nest.Create("noise_generator")
+        nest.SetStatus(ng_offset, {"mean" : mean_I_ext_exc_end,
+                                  "std" : stdI_ext_exc_end,
+                                  "dt" : self.network_params["stimulation_params"]["dt_external_stim"],
+                                  "origin" : self.simulation_params["eta_end_origin"]})
+
+        self.exc_bkg_input = ng_exc_E
+        self.inh_bkg_input = ng_inh_I
+        self.exc_offset = ng_offset
+
+        
+    def create_item_loading_signals(self):
+        """
+        Computes item loading signals.
+
+        Returns the list item_loading_signals contaning the item loading input currents.
+
+        """
+
+        self.item_loading_signals = []
+
+        eta_exc = self.network_params["eta_exc"]
+        Sigma_exc = 0.0 #self.network_params["Sigma_exc"] #0.0
+        origin = self.network_params["item_loading"]["origin"]
+
+        for item in range(self.network_params["item_loading"]["nstim"]):
+            cue, std_cue = noise_params(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0], dt=self.network_params["stimulation_params"]["dt_external_stim"])
+            rate_cue, _ = get_rate_and_weight_poisson(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
+            if(self.network_params["poisson_bkg"]["allow"]):
+                print("Item loading signal {}: rate {} Hz".format(item, rate_cue))
+                I_cue = nest.Create("poisson_generator")
+                nest.SetStatus(I_cue, {"rate" : rate_cue,
+                                   "origin" : origin[item],
+                                   "start" : 0.0,
+                                   "stop" : self.network_params["stimulation_params"]["T_cue"]})
+            else:
+                I_cue = nest.Create("noise_generator")
+                nest.SetStatus(I_cue, {"mean" : cue,
+                                    "std" : std_cue,
+                                    "dt" : self.network_params["stimulation_params"]["dt_external_stim"],
+                                    "origin" : origin[item],
+                                    "start" : 0.0,
+                                    "stop" : self.network_params["stimulation_params"]["T_cue"]})
+                
+            self.item_loading_signals.append(I_cue)
+
+    def create_item_loading_signals_mip(self):
+        """
+        Computes item loading signals for the MIP.
+
+        Returns the list item_loading_signals_mip contaning the item loading input currents for the MIP.
+
+        """
+
+        self.item_loading_signals_mip = []
+
+        eta_exc = self.network_params["eta_exc"]
+        Sigma_exc = 0.0 #self.network_params["Sigma_exc"] #0.0
+        origin = self.network_params["item_loading_mip"]["origin"]
+        correlation_c = self.network_params["stimulation_params"]["correlation_c"]
+
+        for item in range(self.network_params["item_loading_mip"]["nstim"]):
+            # rate dei processi mip figlio
+            rate_cue, _ = get_rate_and_weight_poisson(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
+            # rate del processo mip madre
+            rate_master = rate_cue / correlation_c
+            I_cue = nest.Create("mip_generator")
+            nest.SetStatus(I_cue, {"rate" : rate_master,
+                                   "origin" : origin[item],
+                                   "start" : 0.0,
+                                   "stop" : self.network_params["stimulation_params"]["T_cue"],
+                                   "p_copy" : correlation_c})
+            
+            print("item {}: rate master: {}, rate cue: {}, correlation_c: {}".format(item, rate_master, rate_cue, correlation_c))
+            self.item_loading_signals_mip.append(I_cue)
+
+
+    def create_nonspecific_readout_signals(self):
+        """
+        Computes the signals injected into the exc populations to reactivate the selective population.
+
+        Returns the list nonspecific_readout_signals contaning the nonspecific readout signal inputs.
+
+        """
+
+        self.nonspecific_readout_signals = []
+
+        eta_exc = self.network_params["eta_exc"]
+        Sigma_exc = 0.0 #self.network_params["Sigma_exc"] #0.0
+        origin = self.network_params["nonspecific_readout_signals"]["origin"]
+
+        # create the stimulus
+
+
+
+    def create_random_nonspecific_noise(self):
+        """
+        Creation of the noisy input injected in a subset of the excitatory neurons
+
+        Returns the list random_noise contaning the nonspecific noise signal 
+        injected into a fraction of the excitatory neurons.
+
+        """
+
+        self.random_noise = []
+
+        eta_exc = self.network_params["eta_exc"]
+        Sigma_exc = 0.0 #self.network_params["Sigma_exc"] #0.0
+        origin = self.network_params["nonspecific_noise"]["origin"]
+
+        for i in range(self.network_params["nonspecific_noise"]["nstim"]):
+        # create the stimulus
+            if(self.network_params["poisson_bkg"]["allow"]):
+                rate_cue, _ = get_rate_and_weight_poisson(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
+                I_noise = nest.Create("poisson_generator")
+                nest.SetStatus(I_noise, {"rate" : rate_cue,
+                                    "origin" : origin[i],
+                                   "start" : 0.0,
+                                   "stop" : self.network_params["stimulation_params"]["T_cue"]})
+
+            
+            else:
+                cue, std_cue = noise_params(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0], dt=self.network_params["stimulation_params"]["dt_external_stim"])
+                I_noise = nest.Create("noise_generator")
+                nest.SetStatus(I_noise, {"mean" : cue,
+                                        "std" : std_cue,
+                                        "dt" : self.network_params["stimulation_params"]["dt_external_stim"],
+                                        "origin" : origin[i],
+                                        "start" : 0.0,
+                                        "stop" : self.network_params["stimulation_params"]["T_cue"]})
+                
+            self.random_noise.append(I_noise)
+    
+
+    def create_periodic_sequence(self):
+        """
+        Creation of the periodic sequence of nonspecific readout signals.
+
+        Returns the list periodic_sequence contaning the periodic signals to be injected into the network.
+
+        """
+
+        self.periodic_sequence = []
+
+        eta_exc = self.network_params["eta_exc"]
+        Sigma_exc = 0.0 #self.network_params["Sigma_exc"]
+        times = self.network_params["periodic_sequence"]["times"]
+
+        if(self.network_params["poisson_bkg"]["allow"]):
+            for i in range(len(times)):
+            # create the stimulus
+                    rate_poisson_seq, _ = get_rate_and_weight_poisson(eta_exc*(self.network_params["stimulation_params"]["A_period_reac"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
+                    I_nspec_signal = nest.Create("noise_generator")
+                    nest.SetStatus(I_nspec_signal, {"rate" : rate_poisson_seq,
+                                            "origin" : times[i],
+                                            "start" : 0.0,
+                                            "stop" : self.network_params["stimulation_params"]["T_period_reac"]})
+
+        else:
+            for i in range(len(times)):
+            # create the stimulus
+                cue, std_cue = noise_params(eta_exc*(self.network_params["stimulation_params"]["A_period_reac"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0], dt=self.network_params["stimulation_params"]["dt_external_stim"])
+                I_nspec_signal = nest.Create("noise_generator")
+                nest.SetStatus(I_nspec_signal, {"mean" : cue,
+                                        "std" : std_cue,
+                                        "dt" : self.network_params["stimulation_params"]["dt_external_stim"],
+                                        "origin" : times[i],
+                                        "start" : 0.0,
+                                        "stop" : self.network_params["stimulation_params"]["T_period_reac"]})
+                
+            self.periodic_sequence.append(I_nspec_signal)
+
+
+    def create_external_inputs(self):
+        """
+        Creation of the whole external inputs using the previous functions.
+
+        """
+
+        print("Creating network external inputs...", end = ' ')
+        if ("background_input" in self.network_params):
+            self.create_background_input()
+        if ("item_loading" in self.network_params):
+            self.create_item_loading_signals()
+        if ("item_loading_mip" in self.network_params):
+            self.create_item_loading_signals_mip()
+        if("nonspecific_readout_signals" in self.network_params):
+            self.create_nonspecific_readout_signals()
+        if("nonspecific_noise" in self.network_params):
+            self.create_random_nonspecific_noise()
+        if("periodic_sequence" in self.network_params):
+            self.create_periodic_sequence()
+        print("Done")
+
+    
+    def create_recording_devices(self):
+        """
+        Creation of the recording devices (i.e. spike recorders).
+
+        """
+
+        print("Creating network external inputs...", end = ' ')
+        
+        self.spike_recorders = []
+        for sr in range(len(self.simulation_params["recording_params"]["pop_recorded"])):
+            s = nest.Create("spike_recorder")
+            nest.SetStatus(s, {"start" : self.simulation_params["recording_params"]["spike_recording_params"]["start"]})
+
+            self.spike_recorders.append(s)
+            
+        if(self.simulation_params["recording_params"]["save_mip_spikes"]):
+            if ("item_loading_mip" in self.network_params):
+                for i in range(self.network_params["item_loading_mip"]["nstim"]):
+                    s = nest.Create("spike_recorder")
+                    nest.SetStatus(s, {"start" : self.simulation_params["recording_params"]["spike_recording_params"]["start"]})
+                    self.spike_recorder_mip = s
+            
+        print("Done")
+
+    
+    def connect_populations(self):
+        """
+        Creation of the connections between neuron populations.
+
+        """
+
+        #print option to be implemented
+        more_print = False
+
+        #definition of the weight and standard deviations variables
+        J_p_pA = get_weight(self.network_params["syn_params"]["J_p"], self.network_params["neur_params"]["tau"][0])
+        std_p_pA = get_weight(self.network_params["syn_params"]["start_dist_weights"]["std"], self.network_params["neur_params"]["tau"][0])
+
+        J_b_pA = get_weight(self.network_params["syn_params"]["J_b"], self.network_params["neur_params"]["tau"][0])
+        std_b_pA = get_weight(self.network_params["syn_params"]["start_dist_weights"]["std"], self.network_params["neur_params"]["tau"][0])
+
+        allow_dist = self.network_params["syn_params"]["start_dist_weights"]["allow"]
+
+        print("Connecting the neuron populations...", end = ' ')
+        for i in range(self.p):
+            if more_print:
+                print("\nTarget: selective population ", i+1)
+            # indegrees from the exc selective pops
+            for j in range(self.p):
+                if more_print:
+                    print("\tSource: selective population ", j+1)
+                if i==j:
+                    # Creation of synapses between same selective populations
+                    con_dict = {'rule': 'fixed_indegree', 
+                            'indegree': int(self.f*self.c*self.network_params["N_exc"]),
+                            'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+                    
+                    syn_dict = {"synapse_model": "stdp_synapse_rec",
+                                "tau_plus": self.network_params["stdp_params"]["tau_plus"],
+                                "lambda": self.network_params["stdp_params"]["lambda"],
+                                "alpha": self.network_params["stdp_params"]["alpha"],
+                                "mu_plus": self.network_params["stdp_params"]["mu_plus"],
+                                "mu_minus": self.network_params["stdp_params"]["mu_minus"],
+                                "Wmax": self.network_params["stdp_params"]["Wmax"],
+                                "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
+                                "weight": nest.random.normal(mean = J_p_pA, std = std_p_pA) if allow_dist else J_p_pA}
+                    nest.Connect(self.exc_populations[j], self.exc_populations[i], con_dict, syn_dict)
+                else:
+                    # Creation of synapses between different selective populations
+                    con_dict = {'rule': 'fixed_indegree', 
+                            'indegree': int(self.f*self.c*self.network_params["N_exc"]),
+                            'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+                
+                    syn_dict = {"synapse_model": "stdp_synapse_rec",
+                                "tau_plus": self.network_params["stdp_params"]["tau_plus"],
+                                "lambda": self.network_params["stdp_params"]["lambda"],
+                                "alpha": self.network_params["stdp_params"]["alpha"],
+                                "mu_plus": self.network_params["stdp_params"]["mu_plus"],
+                                "mu_minus": self.network_params["stdp_params"]["mu_minus"],
+                                "Wmax": self.network_params["stdp_params"]["Wmax"],
+                                "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
+                                "weight": nest.random.normal(mean = J_b_pA, std = std_b_pA) if allow_dist else J_b_pA}
+                    nest.Connect(self.exc_populations[j], self.exc_populations[i], con_dict, syn_dict)
+            
+            # indegrees from the other exc neurons
+            if more_print:
+                print("\tSource: non-selective exc pop")
+            #Creation of synapses from the other exc neurons
+            con_dict = {'rule': 'fixed_indegree', 'indegree': int((1.0-self.network_params["syn_params"]["gamma_0"])*self.c*(1.0-self.f*self.p)*self.network_params["N_exc"]),
+                        'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+            
+            syn_dict = {"synapse_model": "stdp_synapse_rec",
+                                "tau_plus": self.network_params["stdp_params"]["tau_plus"],
+                                "lambda": self.network_params["stdp_params"]["lambda"],
+                                "alpha": self.network_params["stdp_params"]["alpha"],
+                                "mu_plus": self.network_params["stdp_params"]["mu_plus"],
+                                "mu_minus": self.network_params["stdp_params"]["mu_minus"],
+                                "Wmax": self.network_params["stdp_params"]["Wmax"],
+                                "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
+                                "weight": nest.random.normal(mean = J_b_pA, std = std_b_pA) if allow_dist else J_b_pA}
+            nest.Connect(self.exc_populations[-1], self.exc_populations[i], con_dict, syn_dict)
+
+            if(self.network_params["syn_params"]["gamma_0"] > 0.0):
+                con_dict['indegree'] = int(self.network_params["syn_params"]["gamma_0"]*self.c*(1.0-self.f*self.p)*self.network_params["N_exc"])
+
+                syn_dict["weight"] = nest.random.normal(mean = J_p_pA, std = std_p_pA) if allow_dist else J_p_pA
+                nest.Connect(self.exc_populations[-1], self.exc_populations[i], con_dict, syn_dict)
+
+            # indegrees from the inh pop
+            if more_print:
+                print("\tSource: inh pop")
+            con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.c*self.network_params["N_inh"]),
+                        'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+            syn_dict = {"synapse_model": "static_synapse",
+                        "weight": get_weight(-self.network_params["syn_params"]["J_EI"], self.network_params["neur_params"]["tau"][1]),
+                        "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1])}
+            nest.Connect(self.inh_population, self.exc_populations[i], con_dict, syn_dict)
+
+        # connections for the inhibitory population
+        if more_print:
+            print("\nTarget: inhibitory population")
+        # indegrees from the populations
+        for i in range(self.p):
+            if more_print:
+                print("\tSource: selective population ", i+1)
+            con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.f*self.c*self.network_params["N_exc"]),
+                        'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+            syn_dict = {"synapse_model": "static_synapse",
+                        "weight": get_weight(self.network_params["syn_params"]["J_IE"], self.network_params["neur_params"]["tau"][1]),
+                        "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1])}    
+            nest.Connect(self.exc_populations[i], self.inh_population, con_dict, syn_dict)
+
+        # indegrees from the other exc neurons
+        if more_print:
+            print("\tSource: non-selective exc pop")
+        con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.c*(1.0-self.f*self.p)*self.network_params["N_exc"]),
+                    'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+        syn_dict = {"synapse_model": "static_synapse",
+                    "weight": get_weight(self.network_params["syn_params"]["J_IE"], self.network_params["neur_params"]["tau"][0]),
+                    "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1])}  
+        nest.Connect(self.exc_populations[-1], self.inh_population, con_dict, syn_dict)
+
+        # indegrees from inh pop itself
+        if more_print:
+            print("\tSource: inh pop")
+        con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.c*self.network_params["N_inh"]),
+                    'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+        syn_dict = {"synapse_model": "static_synapse",
+                    "weight": get_weight(-self.network_params["syn_params"]["J_II"], self.network_params["neur_params"]["tau"][1]),
+                    "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1])} 
+        nest.Connect(self.inh_population, self.inh_population, con_dict, syn_dict)
+
+        # connection for the non-specific exc population
+        if more_print:
+            print("\nTarget: non-specific excitatory population")
+        # indegrees from the selective populations
+        for i in range(self.p):
+            if more_print:
+                print("\tSource: selective population ", i+1)
+            con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.f*self.c*self.network_params["N_exc"]),
+                        'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+            
+            syn_dict = {"synapse_model": "stdp_synapse_rec",
+                                "tau_plus": self.network_params["stdp_params"]["tau_plus"],
+                                "lambda": self.network_params["stdp_params"]["lambda"],
+                                "alpha": self.network_params["stdp_params"]["alpha"],
+                                "mu_plus": self.network_params["stdp_params"]["mu_plus"],
+                                "mu_minus": self.network_params["stdp_params"]["mu_minus"],
+                                "Wmax": self.network_params["stdp_params"]["Wmax"],
+                                "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
+                                "weight": nest.random.normal(mean = J_b_pA, std = std_b_pA) if allow_dist else J_b_pA}
+            nest.Connect(self.exc_populations[i], self.exc_populations[-1], con_dict, syn_dict)
+
+        # indegrees from the rest of the exc pop
+        if more_print:
+            print("\tSource: non-selective exc pop")
+        con_dict = {'rule': 'fixed_indegree', 'indegree': int((1.0-self.network_params["syn_params"]["gamma_0"])*self.c*(1.0-self.f*self.p)*self.network_params["N_exc"]),
+                    'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+        
+        syn_dict = {"synapse_model": "stdp_synapse_rec",
+                                "tau_plus": self.network_params["stdp_params"]["tau_plus"],
+                                "lambda": self.network_params["stdp_params"]["lambda"],
+                                "alpha": self.network_params["stdp_params"]["alpha"],
+                                "mu_plus": self.network_params["stdp_params"]["mu_plus"],
+                                "mu_minus": self.network_params["stdp_params"]["mu_minus"],
+                                "Wmax": self.network_params["stdp_params"]["Wmax"],
+                                "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
+                                "weight": nest.random.normal(mean = J_b_pA, std = std_b_pA) if allow_dist else J_b_pA}
+        nest.Connect(self.exc_populations[-1], self.exc_populations[-1], con_dict, syn_dict)
+
+        if(self.network_params["syn_params"]["gamma_0"] > 0.0):
+            con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.network_params["syn_params"]["gamma_0"]*self.c*(1.0-self.f*self.p)*self.network_params["N_exc"]),
+                        'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+            
+            syn_dict = {"synapse_model": "stdp_synapse_rec",
+                                    "tau_plus": self.network_params["stdp_params"]["tau_plus"],
+                                    "lambda": self.network_params["stdp_params"]["lambda"],
+                                    "alpha": self.network_params["stdp_params"]["alpha"],
+                                    "mu_plus": self.network_params["stdp_params"]["mu_plus"],
+                                    "mu_minus": self.network_params["stdp_params"]["mu_minus"],
+                                    "Wmax": self.network_params["stdp_params"]["Wmax"],
+                                    "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
+                                    "weight": nest.random.normal(mean = J_p_pA, std = std_p_pA) if allow_dist else J_p_pA}
+            nest.Connect(self.exc_populations[-1], self.exc_populations[-1], con_dict, syn_dict)
+
+        # indegrees from the inh pop
+        if more_print:
+            print("\tSource: inh pop")
+        con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.c*self.network_params["N_inh"]),
+                    'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+        syn_dict = {"synapse_model": "static_synapse",
+                    "weight": get_weight(-self.network_params["syn_params"]["J_EI"], self.network_params["neur_params"]["tau"][1]),
+                    "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1])}
+        nest.Connect(self.inh_population, self.exc_populations[-1], con_dict, syn_dict)
+
+        print("Done")    
+    
+    def connect_external_inputs(self):
+        """
+        Creation of the connections between neurons and external inputs.
+
+        """
+        print("Connecting external inputs...", end = ' ')
+
+        eta_exc = self.network_params["eta_exc"]
+        eta_inh = self.network_params["eta_inh"]
+        Sigma_exc = self.network_params["Sigma_exc"]
+        Sigma_inh = self.network_params["Sigma_inh"]
+        
+        # background input connection
+        if("background_input" in self.network_params):
+            if(self.network_params["poisson_bkg"]["allow"]):
+                _, weight_ex = get_rate_and_weight_poisson(eta_exc,Sigma_exc, self.network_params["neur_params"]["tau"][0])
+                _, weight_in = get_rate_and_weight_poisson(eta_inh,Sigma_inh, self.network_params["neur_params"]["tau"][1])
+                nest.Connect(self.exc_bkg_input, self.exc_population, syn_spec={"weight":weight_ex,"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+                nest.Connect(self.inh_bkg_input, self.inh_population, syn_spec={"weight":weight_in,"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+                print("Background input connection: weight exc {}, weight inh {}".format(weight_ex, weight_in))
+            else:
+                nest.Connect(self.exc_bkg_input, self.exc_population, syn_spec={"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+                nest.Connect(self.inh_bkg_input, self.inh_population, syn_spec={"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+            # connect offset to diminish bkg exc input
+            nest.Connect(self.exc_offset, self.exc_population, syn_spec={"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+
+        # item loading connection
+        if("item_loading" in self.network_params):
+            for i in range(self.network_params["item_loading"]["nstim"]):
+                if(self.network_params["poisson_bkg"]["allow"]):
+                    _, weight_cue_loading= get_rate_and_weight_poisson(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
+                    print("Item loading signal {}: weight {}".format(i, weight_cue_loading))
+                    nest.Connect(self.item_loading_signals[i], self.exc_populations[self.network_params["item_loading"]["pop_id"][i]], 
+                                #syn_spec={"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+
+                                syn_spec={"weight":weight_cue_loading,"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+                else:
+                    nest.Connect(self.item_loading_signals[i], self.exc_populations[self.network_params["item_loading"]["pop_id"][i]], 
+                                #syn_spec={"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+
+                                syn_spec={"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+           
+        if("item_loading_mip" in self.network_params):
+            for i in range(self.network_params["item_loading_mip"]["nstim"]):
+                _, weight_cue_loading= get_rate_and_weight_poisson(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
+                
+                nest.Connect(self.item_loading_signals_mip[i], self.exc_populations[self.network_params["item_loading_mip"]["pop_id"][i]], 
+                                #syn_spec={"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+
+                                syn_spec={"weight":weight_cue_loading,"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+                
+        # nonspecific readout signals connection
+        if("nonspecific_readout_signals" in self.network_params):
+            for i in range(self.network_params["nonspecific_readout_signals"]["nstim"]):
+                if(self.network_params["poisson_bkg"]["allow"]):
+
+                    _, weight_cue_non_specific = get_rate_and_weight_poisson(eta_exc*(self.network_params["stimulation_params"]["A_reac"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
+                    nest.Connect(self.nonspecific_readout_signals[i], self.exc_population, 
+                                #syn_spec={"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+                                syn_spec={"weight":weight_cue_non_specific,"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+                else:
+                    nest.Connect(self.nonspecific_readout_signals[i], self.exc_population, 
+                                syn_spec={"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+           
+        # random nonspecific noise
+        if("nonspecific_noise" in self.network_params):
+
+            con_dict = {'rule': 'fixed_total_number', 'N': int(self.network_params["nonspecific_noise"]["frac"]*self.network_params["N_exc"])}
+            syn_dict = {"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])}
+            if(self.network_params["poisson_bkg"]["allow"]):
+                for i in range(self.network_params["nonspecific_noise"]["nstim"]):
+                    _, weight_poisson = get_rate_and_weight_poisson(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
+                    syn_dict = {"weight":weight_poisson,"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])}
+
+                    nest.Connect(self.random_noise[i], self.exc_population, con_dict, syn_dict)
+
+            else:
+                for i in range(self.network_params["nonspecific_noise"]["nstim"]):
+                    nest.Connect(self.random_noise[i], self.exc_population, con_dict, syn_dict)
+            
+        if("periodic_sequence" in self.network_params):
+            if(self.network_params["poisson_bkg"]["allow"]):
+                weight_poisson= get_weight(eta_exc*(self.network_params["stimulation_params"]["A_period_reac"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
+                for i in range(len(self.network_params["periodic_sequence"]["times"])):
+                    
+                    nest.Connect(self.periodic_sequence[i], self.exc_population, 
+                                syn_spec={"weight":weight_poisson,"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+
+            else:
+                for i in range(len(self.network_params["periodic_sequence"]["times"])):
+                    
+                    nest.Connect(self.periodic_sequence[i], self.exc_population, 
+                                syn_spec={"delay": nest.random.uniform(min=self.network_params["syn_params"]["delay_ext"][0], max=self.network_params["syn_params"]["delay_ext"][1])})
+
+        print("Done")
+
+    def connect_recording_devices(self):
+        """
+        Creation of the connections between neurons and recording devices.
+
+        """
+        print("Connecting recording devices...", end = ' ')
+        for i in range(len(self.spike_recorders)):
+            pop_id = self.simulation_params["recording_params"]["pop_recorded"][i]
+            N_neurons_recorded = int(self.network_params["N_exc"]*self.f*self.simulation_params["recording_params"]["fraction_pop_recorded"])
+            nest.Connect(self.exc_populations[pop_id][0:N_neurons_recorded], self.spike_recorders[i])
+            
+            
+
+        print("Done")
+    
+    
+    def build_network(self):
+        """
+        Network build, in which neurons, external inputs and recording devices are created and connected.
+
+        """
+        self.prepare_nest()
+        print("\n### NETWORK BUILD ###\n")
+        t0 = time.time()
+        print("Creating nodes...", end = " ")
+        self.create_populations()
+        self.create_external_inputs()
+        self.create_recording_devices()
+        t1 = time.time()
+        print("Nodes created in {:.2} s.".format(t1-t0))
+        print("Connecting nodes...")
+        self.connect_populations()
+        self.connect_external_inputs()
+        self.connect_recording_devices()
+        t2 = time.time()
+        print("Nodes connected in {:.3} s.".format(t2-t1))
+        print("Network built in {:.3} s.".format(t2-t0))
+
+
+    def simulate_network(self):
+        """
+        Network simulation.
+
+        """
+        total_time = self.simulation_params["t_sim"]
+        step_ms = 100.0
+        max_hz = 50.0 
+        last_spikes = np.zeros(len(self.spike_recorders))
+        stop_sim = False
+        n_neurons = (self.simulation_params["recording_params"]["fraction_pop_recorded"] * self.network_params["N_exc"] * self.network_params["f"])
+
+        print("\n### NETWORK SIMULATION ###")
+
+        print("Starting the simulation...")
+        dum_start = time.time()
+        
+        for step in range(int(total_time/step_ms)):
+            nest.Simulate(step_ms)
+            
+            for i in range(len(self.spike_recorders)):
+                sr = nest.GetStatus(self.spike_recorders[i], "n_events")[0]
+                n_spikes = sr - last_spikes[i]
+                last_spikes[i] = sr
+                
+                rate = (n_spikes / n_neurons) / (step_ms / 1000.0)
+                
+                if rate > max_hz:
+                    print("Warning: high firing rate detected in selective population {}: {:.2f} Hz".format(
+                          self.simulation_params["recording_params"]["pop_recorded"][i], rate))
+                    print("interrupting the simulation to avoid memory issues...")
+                    stop_sim = True
+                    self.network_params.update({"simulation_interrupted": stop_sim, "interruption_time": step*step_ms})
+                    self.save_params()
+                    break
+            
+            if stop_sim:
+                break
+        
+        #nest.Simulate(self.simulation_params["t_sim"])
+        t_sim = time.time() - dum_start
+        print("Network simulated in {} s.".format(t_sim))
+
+
+    def raster_plot(self):
+        """
+        Simple raster plot of the excitatory selective population.
+        Also the external inputs are indicated by using vertical shading.
+
+        """
+        axfont=19
+        title=20
+        fig, ax = plt.subplots(figsize=(15,10))
+        plt.title("Raster plot", fontsize=title)
+        colors = ["blue", "red", "green", "orange", "olive"]
+        for i in range(len(self.spike_recorders)):
+            sr = self.spike_recorders[i].get("events")
+            ax.plot(sr["times"], sr["senders"], '.', color = colors[i%len(colors)], label="Selective population {}".format(self.simulation_params["recording_params"]["pop_recorded"][i]))
+        ax.set_ylabel("# cell", fontsize=axfont)
+        ax.set_xlabel("Time [ms]", fontsize=axfont)
+        ax.tick_params(labelsize=axfont)
+        if ("item_loading" in self.network_params):
+            for i in range(self.network_params["item_loading"]["nstim"]):
+                if(i==0):
+                    ax.axvspan(self.network_params["item_loading"]["origin"][i], self.network_params["item_loading"]["origin"][i]+self.network_params["stimulation_params"]["T_cue"], alpha=0.5, color='grey', label="Item Loading")
+                else:
+                    ax.axvspan(self.network_params["item_loading"]["origin"][i], self.network_params["item_loading"]["origin"][i]+self.network_params["stimulation_params"]["T_cue"], alpha=0.5, color='grey')
+        if("nonspecific_readout_signals" in self.network_params):
+            for i in range(self.network_params["nonspecific_readout_signals"]["nstim"]):
+                if(i==0):
+                    ax.axvspan(self.network_params["nonspecific_readout_signals"]["origin"][i], self.network_params["nonspecific_readout_signals"]["origin"][i]+self.network_params["stimulation_params"]["T_reac"], alpha=0.5, color='cornflowerblue', label="Readout signal")
+                else:
+                    ax.axvspan(self.network_params["nonspecific_readout_signals"]["origin"][i], self.network_params["nonspecific_readout_signals"]["origin"][i]+self.network_params["stimulation_params"]["T_reac"], alpha=0.5, color='cornflowerblue')
+        if("nonspecific_noise" in self.network_params):
+            for i in range(self.network_params["nonspecific_noise"]["nstim"]):
+                if(i==0):
+                    ax.axvspan(self.network_params["nonspecific_noise"]["origin"][i], self.network_params["nonspecific_noise"]["origin"][i]+self.network_params["stimulation_params"]["T_cue"], alpha=0.5, color='turquoise', label="Noise")
+                else:
+                    ax.axvspan(self.network_params["nonspecific_noise"]["origin"][i], self.network_params["nonspecific_noise"]["origin"][i]+self.network_params["stimulation_params"]["T_cue"], alpha=0.5, color='turquoise')
+        if("periodic_sequence" in self.network_params):
+            for i in range(len(self.network_params["periodic_sequence"]["times"])):
+                if(i==0):
+                    ax.axvspan(self.network_params["periodic_sequence"]["times"][i], self.network_params["periodic_sequence"]["times"][i]+self.network_params["stimulation_params"]["T_period_reac"], alpha=0.5, color='lightgrey', label="Periodic stimuli")
+                else:
+                    ax.axvspan(self.network_params["periodic_sequence"]["times"][i], self.network_params["periodic_sequence"]["times"][i]+self.network_params["stimulation_params"]["T_period_reac"], alpha=0.5, color='lightgrey')
+
+
+        lines, labels = ax.get_legend_handles_labels()
+        ax.legend(lines, labels, fontsize=axfont, loc = 'upper right')
+        #fig.set_size_inches(32, 18)
+        if(self.simulation_params["recording_params"]["save_to_file"]==True):
+            plt.savefig(self.simulation_params['data_path'] + "raster_plot.png", format='png')
+        # plt.draw()
+        
