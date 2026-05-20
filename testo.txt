@@ -1,0 +1,219 @@
+testare vari parametri
+
+mettere delle distribuzioni iniziali ai pesi invece che peso fisso
+
+dare una piccola distribuzione ai pesi iniziale invece che fisso su tutti
+a parità di durata segnale rendere più intenso
+vedere le distribuzioni di pesi se ritornano a quello originario
+
+protocollo apprendimento testare varie combinazioni parametri
+cercare un protocollo di apprendimento e/o crearne uno senza partire da zero
+
+get weight rimettere
+
+rate non oltre 50hz
+
+segnali minori di 10s (provare anche di più, fa nulla)
+
+mip generator parlare 
+
+fare slide per parlare con bruno
+
+mu e alfa testare
+
+-------------------------------------------------------------------------
+FASE 1: LISTA COSE DA FARE
+
+1 - Sistemare il get_weight() +++++FATTO+++++
+2 - Mettere le distribuzioni ai pesi delle sinapsi stdp +++++FATTO+++++
+
+Test sui parametri stdp
+
+lambda: learning rate
+alpha: assimetria tra potenziamento e depressione
+mu: da [0,1] quanto è addittiva/moltiplicativa
+
+Test sui parametri dello stimolo
+T_cue: tempo di iniezione dello stimolo
+A_cue: quanto è potente lo stimolo rispetto a background
+eta_exc: stimolo di background
+
+1 - Prima bisogna cercare uno stimolo di background (eta_exc) buono per ottenere un'attività di base
+
+'stdp_params' : {'tau_plus' : 20.0, 'tau_minus' : 20.0, 
+                     'lambda' : 0.1, 'alpha' : 1.0,
+                     'mu_plus' : 1.0, 'mu_minus' : 1.0,
+                     'Wmax' : 150.0}
+
+SPIEGARE COSA E' ETA_EXC!!!
+Si è testato eta_exc [18.0, 20.0] con passo 0.1. 
+La rete non esplode e il rate arriva fino a 1-2 Hz per eta_exc = 20.0.
+
+Scegliamo un valore un po' più basso per stabilità eta_exc = 19.7
+
+2 - Si aggiunge lo stimolo poissoniano e si modifica solo A_cue (fissato T_cue = 1000.0 ms)
+Parametri stdp sempre uguali a prima
+
+Si è testato A_cue [1.0, 1.5] con passo 0.025.
+
+A 1.150 il valore medio della distribuzione dei pesi potenziati della pop0 arriva a 0.45 circa.
+
+Andando a valori più elevati, da 1.175, inizia ad emettere molto e fa pop spike dopo T_cue.
+
+Comunque, sembra che il rate aumenti durante il T_cue, quindi non mi sembra molto stabile la rete.
+Per testare questo, si vede se aumentando il T_cue esplode la rete.
+
+3 - Testare la stabilità della rete scegliendo A_cue = 1.150 e eta_exc = 19.7
+
+Si è testato T_cue [350.0, 2350.0] con passo 100.0
+
+Da 950.0 a 1250.0 la popolazione 0 ha distribuzione circa vicino a 0.45 ma non sembra troppo stabile.
+Il rate passa da circa 15.0 Hz a 40.0 Hz nell'intervallo T_cue. 
+
+Probabilmente bisogna modificare i parametri della stdp. In particolare lambda (learning rate).
+Immagino che il learning rate di 0.1 sia troppo grande.
+
+A questo punto bisogna trovare una giusta combinazione tra lambda e T_cue. In modo tale che la simulazione sia stabile 
+ma che la distribuzione arrivi a 0.45 in un tempo raggionevole.
+
+Adesso si potrebbe testare il learning rate. Però se lo si diminuisce ovviamente la pop 0 imparerà più lentamente
+quindi ci vorrà più tempo per raggiungere la distribuzione target centrata circa su 0.45
+
+4 - Testare il learning rate con T_cue = 1000.0 ms
+
+Si è testato lambda [0.001, 0.101] con passo 0.005
+
+Come si pensava, con learning rate più basso la rete sembra più stabile ma chiaramente ci impiega di più
+a raggiungere la distribuzione di 0.45
+Sembra quasi lineare la dipendenza della media della distribuzione dal lambda. Infatti, a 0.051 si ha una distribuzione
+in mezzo tra 0.10 (iniziale) e 0.45 (da raggiungere).
+
+Questo fa pensare che bisogna scegliere un learning rate più basso e aumentare il T_cue.
+
+Però non bisogna superare un T_cue di 10s.
+
+Gli ultimi parametri da testare sono alfa e mu. 
+
+Si sceglie un tempo T_cue da tenere fisso più alto di 1000 ms in quanto si vuole diminuire il learning rate
+e vedere se la rete riesce ad essere più stabile con il firing rate, ovvero che non aumenti troppo in poco tempo.
+
+Guardando l'articolo "Thalamo-cortical spiking model of incremental learning combining perception, context and NREM-sleep"
+c'è un tipo di apprendimento incrementale. Nel senso che non vengono stimolati tutti i neuroni insieme ma a sottogruppi.
+Gli incrementi sono 10 in intervallo temporale di 30s. Quindi ogni incremento è di circa 3s (3000ms).
+
+Si scelglie un valore di T_cue nello stesso ordine di grandezza: T_cue = 3s
+
+5 - Si rifà il run del punto 4 con T_cue = 3000 ms
+
+Si è testato lambda [0.001, 0.101] con passo 0.005
+
+si nota che a lambda = 0.041 la pop 0 raggiunge la distribuzione dei pesi centrata circa su 0.45
+Però non è stabile, infatti aumentando lambda a 0.046 la pop0 e anche le altre popolazioni iniziano ad emettere troppo
+E' anche probabile che aumentando i secondi inizia ad essere instabile anche con lamda più basso.
+
+E' molto probabile che per raggiungere la distribuzione centrata su 0.45 serve un tempo maggiore di 3s
+affinchè si possa diminuire lambda rendendo la simulazione più stabile
+
+Si inizia a pensare che forse la scelta del eta_exc e A_cue sia quello che rende instabile la rete
+Forse bisogna abbassare A_cue, potrebbe essere troppo grande.
+
+6 - Si prova a diminuire A_cue tenendo T_cue = 3s e lambda = 0.040
+
+si è testato A_cue [1.01, 1.15] con passo 0.007.
+
+Si è notato che anche le altre distribuzioni che hanno pop 0 come sorgente si stanno leggermente potenziando
+è probabile che questo potenziamento poi crea questo feedback loop in cui iniziano ad autoalimentarsi
+facendo esplodere tutta la rete
+
+UNA COSA NON E' CHIARA: LA POPOLAZIONE INIBITORIA SEMBRA CHE NON STIA FACENDO NULLA
+
+forse modificando alfa e rendendo la depressione più importante allora tutto si riequilibra?
+
+A questo punto si può tenere l'ultima simulazione in cui si forma la distribuzione che si sta cercando
+e si prova a vedere se si stabilizza modificando alfa.
+
+la simulazione finale aveva questi parametri:
+
+    # STDP parameters
+    'stdp_params' : {'tau_plus' : 20.0, 'tau_minus' : 20.0, 
+                     'lambda' : 0.04, 'alpha' : 1.0,
+                     'mu_plus' : 1.0, 'mu_minus' : 1.0,
+                     'Wmax' : 150.0},
+    # item loading parameters
+    'stimulation_params' : {'T_cue' : 3000.0, 'A_cue' : 1.15 , "correlation_c": 0.45}
+
+7 - Mantenendo i parametri scritti sopra si modifica alpha
+
+si è testato alpha [1.0, 3.0] con passo 0.1
+
+la distribuzione torna indietro, il potenziamento è più lento
+
+a questo punto si pensa che la rete è di natura instabile. Se i pesi arrivano al 0.45
+è molto probabile che poi la rete esploda.
+
+Questo fa pensare che forse la popolazione inibitoria non sta funzionando bene.
+Forse è perchè ci sono 1000 neuroni in tot invece che 10000?
+
+Si decide di tenere 1.0, quindi potenziamento e depressione sono pari
+
+8 - per finire si modifica mu
+
+si è testato mu [0.0, 1.0] con passo 0.05
+
+all'inizio sembra più stabile la rete, ma la distribuzione è schiacciata verso lo zero ed è anche molto larga
+più si aumenta mu più la distribuzione raggiunge quella ottenuta con le altre simulazioni
+quindi una distribuzione non troppo larga centrata su 0.45
+
+Gia da mu = 0.50 si inizia ad avere una distribuzione accettabile
+
+però c'è sempre questo firing rate che sembra che aumenti esponenzialmente con il tempo di iniezione del segnale
+
+Comunque sembra che a mu più basse di 1.0 la rete sia più stabile
+le altre popolazioni rimangono a rate bassi e non c'è feedback loop
+
+Comunque, il parametro mu sembra che regoli la larghezza della distribuzione
+Maggiore è mu, più è stretta la distribuzione.
+
+Quindi, la cosa migliore è prendere un valore di mu vicino a 1.0 Probabilmente
+
+Parametri finali
+
+    'stdp_params' : {'tau_plus' : 20.0, 'tau_minus' : 20.0, 
+                     'lambda' : 0.04, 'alpha' : 1.0,
+                     'mu_plus' : 1.0, 'mu_minus' : 1.0,
+                     'Wmax' : 150.0},
+    # item loading parameters
+    'stimulation_params' : {'T_cue' : 3000.0, 'A_cue' : 1.15 , "correlation_c": 0.45}
+
+
+ALTRI TEST
+
+1 - ripristinare la rete a 10000 neuroni invece che 1000
+
+la simulazione finisce ma poi dice "terminated" e guardando il file con i pesi non c'è nulla
+
+Si pensa che non funzioni bene il save_weights quando le sinapsi sono tante.
+Si prova senza il save weight per vedere almeno il raster plot.
+
+Senza il save_weight arriva fino a fare il plot. 
+Sembra che per questo caso bisogna aumentare il segnale di background, le altre popolazioni non emettono
+
+si controlla perchè non funziona il save_weight
+
+------------------------------------------------------------------------------
+FASE 2: COSE DA FARE
+
+1 - Implementare la distribuzione dei firing rate prima e dopo l'apprendimento
+2 - Cambiare e usare la stessa scala per tutti gli istogrammi dei pesi
+3 - Trovare le caratteristiche delle distriuzioni dei firing rate in vitro/in vivo (media, std, skewness, curtosis) per confronto
+
+Una volta fatto tutto questo si puo' fare simulazioni grandi (10000 neuroni su pc potente)
+Si confronta la distribuzione dei firing rate prima e dopo l'apprendimento con le distribuzioni reali
+Se le distribuzioni coincidono allora i parametri sono top 
+altrimenti si cambiano finche non si ottiene una distribuzione simile
+
+1 - Implementare la distribuzione dei firing rate prima e dopo l'apprendimento
+
+Si farà un plot per ogni popolazione selettiva (5) e non selettiva (1)
+Ogni plot avrà istogramma prima e dopo apprendimento di colore diverso 
+Poi si farà anche un altro plot aggiuntivo (file diverso) con la differenza di firing rate tra prima e dopo apprendimento

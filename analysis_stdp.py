@@ -257,6 +257,64 @@ def plot_instantaneus_firing_rate(sr, data_path=data_path):
     plt.savefig(data_path+"instantaneous_firing_rate.png")
     plt.draw()
 
+def firing_rate(sr, start_time, stop_time, data_path=data_path):
+    # Calculate the firing rate for each neuron in the time window [start_time, stop_time]
+
+    # select the spikes that are in the time window [start_time, stop_time]
+    time_mask = (sr[:,1] >= start_time) & (sr[:,1] <= stop_time)
+    spike_times = sr[:,1][time_mask]
+    id_neurons = sr[:,0][time_mask]
+
+    # Calculate the firing rate for each neuron using numpy's unique function
+    # it returns the unique neuron id and the number of occurence of every unique neuron id
+    id_neur, counts = np.unique(id_neurons, return_counts=True)
+    firing_rate = counts / ((stop_time - start_time) / 1000.0)
+
+    return firing_rate
+
+def plot_firing_rate_histogram(firing_rates_dict, data_path=None, filename = ""):
+    
+    num_pops = len(firing_rates_dict)
+    if num_pops == 0:
+        print("The firing rates dictionary is empty.")
+        return
+
+    cols = 2  # Set how many columns you want side-by-side
+    rows = math.ceil(num_pops / cols) # Calculate the required rows automatically
+
+    fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 4 * rows))
+
+    # Ensure 'axes' is a 1D (flat) array for easy iteration, 
+    # even if there's only one row or a single plot
+    if num_pops == 1:
+        axes = [axes]
+    else:
+        axes = axes.flatten()
+
+    for ax, (population, firing_rates) in zip(axes, firing_rates_dict.items()):
+        
+        # Draw the histogram in the specific subplot
+        ax.hist(firing_rates, bins="auto", color='steelblue', edgecolor='black', alpha=0.7)
+        
+        # Labels and Titles
+        ax.set_title(f'Firing Rate - {population}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Firing Rate (Hz)')
+        ax.set_ylabel('Count (Neurons)')
+        ax.grid(axis='y', linestyle='--', alpha=0.6)
+
+    # hide the remaining empty subplots
+    for i in range(num_pops, len(axes)):
+        fig.delaxes(axes[i])
+
+    # Optimize spacing to prevent label overlapping
+    plt.tight_layout()
+    
+    if data_path:
+        plt.savefig(f"{data_path}/" + filename + ".png", dpi=300)
+    
+    # Display the grid on screen
+    # plt.show()
+
 def plot_weights_histogram(weights_dict, data_path="", num = ""):
     labelsize = 14
     titlesize = 16
@@ -320,6 +378,32 @@ plot_weights_histogram(weight_dict_1, data_path, num="_1")
 
 # plt.show()
 
+start_time_after = network_params["item_loading"]["origin"][0] + network_params["stimulation_params"]["T_cue"]
+stop_time_after = simulation_params["t_sim"]
+
+start_time_before = 0.0
+stop_time_before = network_params["item_loading"]["origin"][0]
+
 plot_instantaneus_firing_rate(srs)
+
+firing_rates_dict_after = {
+    "Selective population 0": firing_rate(sr0, start_time=start_time_after, stop_time=stop_time_after),
+    "Selective population 1": firing_rate(sr1, start_time=start_time_after, stop_time=stop_time_after),
+    "Selective population 2": firing_rate(sr2, start_time=start_time_after, stop_time=stop_time_after),
+    "Selective population 3": firing_rate(sr3, start_time=start_time_after, stop_time=stop_time_after),
+    "Selective population 4": firing_rate(sr4, start_time=start_time_after, stop_time=stop_time_after)
+}
+
+plot_firing_rate_histogram(firing_rates_dict_after, data_path, filename="firing_rate_after")
+
+firing_rates_dict_before = {
+    "Selective population 0": firing_rate(sr0, start_time=start_time_before, stop_time=stop_time_before),
+    "Selective population 1": firing_rate(sr1, start_time=start_time_before, stop_time=stop_time_before),
+    "Selective population 2": firing_rate(sr2, start_time=start_time_before, stop_time=stop_time_before),
+    "Selective population 3": firing_rate(sr3, start_time=start_time_before, stop_time=stop_time_before),  
+    "Selective population 4": firing_rate(sr4, start_time=start_time_before, stop_time=stop_time_before)
+}
+
+plot_firing_rate_histogram(firing_rates_dict_before, data_path, filename="firing_rate_before")
 
 # plt.show()
