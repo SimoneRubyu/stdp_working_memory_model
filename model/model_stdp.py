@@ -1046,6 +1046,7 @@ class STDPModel:
 
         """
         total_time = self.simulation_params["t_sim"]
+        stop_t_cue = self.network_params["item_loading"]["origin"][0] + self.network_params["stimulation_params"]["T_cue"] if "item_loading" in self.network_params else None
         step_ms = 100.0
         max_hz = 50.0 
         last_spikes = np.zeros(len(self.spike_recorders))
@@ -1078,6 +1079,10 @@ class STDPModel:
             
             if stop_sim:
                 break
+
+            if stop_t_cue is not None and step*step_ms >= stop_t_cue:
+                
+                stop_t_cue = None
         
         #nest.Simulate(self.simulation_params["t_sim"])
         t_sim = time.time() - dum_start
