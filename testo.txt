@@ -206,6 +206,7 @@ FASE 2: COSE DA FARE
 1 - Implementare la distribuzione dei firing rate prima e dopo l'apprendimento
 2 - Cambiare e usare la stessa scala per tutti gli istogrammi dei pesi
 3 - Trovare le caratteristiche delle distriuzioni dei firing rate in vitro/in vivo (media, std, skewness, curtosis) per confronto
+4 - Implementare la possibilità di disattivare e riattivare la stdp al tempo t_stop e t_start
 
 Una volta fatto tutto questo si puo' fare simulazioni grandi (10000 neuroni su pc potente)
 Si confronta la distribuzione dei firing rate prima e dopo l'apprendimento con le distribuzioni reali
@@ -217,3 +218,9 @@ altrimenti si cambiano finche non si ottiene una distribuzione simile
 Si farà un plot per ogni popolazione selettiva (5) e non selettiva (1)
 Ogni plot avrà istogramma prima e dopo apprendimento di colore diverso 
 Poi si farà anche un altro plot aggiuntivo (file diverso) con la differenza di firing rate tra prima e dopo apprendimento
+
+Plot delle distribuzioni di firing rate FATTA SOLO PER POPOLAZIONI SELETTIVE
+SERVE FARLA ANCHE PER POPOLAZIONE NON selettiva
+Per farlo bisogna salvare i firing times dei neuroni della pop non selettiva come per le pop selettive
+
+Fatto per la popolazione non selettiva

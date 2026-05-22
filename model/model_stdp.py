@@ -1011,6 +1011,9 @@ class STDPModel:
             pop_id = self.simulation_params["recording_params"]["pop_recorded"][i]
             N_neurons_recorded = int(self.network_params["N_exc"]*self.f*self.simulation_params["recording_params"]["fraction_pop_recorded"])
             nest.Connect(self.exc_populations[pop_id][0:N_neurons_recorded], self.spike_recorders[i])
+            if i == 5: # non selective population
+                N_neur_non_sel = int(self.network_params["N_exc"]*(1.0 - self.f*self.p)*self.simulation_params["recording_params"]["fraction_pop_recorded"])
+                nest.Connect(self.exc_populations[pop_id][0:N_neur_non_sel], self.spike_recorders[i])
             
             
 
@@ -1100,9 +1103,14 @@ class STDPModel:
         fig, ax = plt.subplots(figsize=(15,10))
         plt.title("Raster plot", fontsize=title)
         colors = ["blue", "red", "green", "orange", "olive"]
+        if len(self.spike_recorders) == 6:
+            colors.append("purple")
         for i in range(len(self.spike_recorders)):
             sr = self.spike_recorders[i].get("events")
             ax.plot(sr["times"], sr["senders"], '.', color = colors[i%len(colors)], label="Selective population {}".format(self.simulation_params["recording_params"]["pop_recorded"][i]))
+            if i == 5:
+                ax.plot(sr["times"], sr["senders"], '.', color = colors[i%len(colors)], label="Non-selective population")
+
         ax.set_ylabel("# cell", fontsize=axfont)
         ax.set_xlabel("Time [ms]", fontsize=axfont)
         ax.tick_params(labelsize=axfont)

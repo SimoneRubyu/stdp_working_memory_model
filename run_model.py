@@ -77,7 +77,7 @@ simulation_p = {
         # fraction of neurons recorded for weight distribution
         "fraction_weights_recorded" : 0.01,
         # selective excitatory population recorded (0, ..., p-1)
-        "pop_recorded" : [0, 1, 2, 3, 4],
+        "pop_recorded" : [0, 1, 2, 3, 4, 5],
         "spike_recording_params": {"start": 100.0},
         # save spike data to file
         "save_to_file" : True,
