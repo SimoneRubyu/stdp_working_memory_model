@@ -174,7 +174,9 @@ default_simulation_params = {
         "save_mip_spikes" : False},
     # path in which simulation data will be saved 
     "data_path" : os.path.join(os.getcwd(), 'data/'),
-    "overwrite_files": True
+    "overwrite_files": True,
+    # time to stop stdp learning (in ms, if None stdp is active during the whole simulation)
+    "t_stop_stdp" : None
 }
 
 """

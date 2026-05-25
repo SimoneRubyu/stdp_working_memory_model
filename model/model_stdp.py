@@ -87,7 +87,29 @@ class STDPModel:
         self.c = self.network_params["c"]
         self.p = self.network_params["p"]
         self.f = self.network_params["f"]
-        
+
+    def stop_stdp(self, chunk_size:int=100):
+        """
+        Stop STDP plasticity globally by setting the learning rate (lambda) to 0.0.
+        Uses chunking over the entire excitatory population to avoid memory issues 
+        and maximize speed.
+
+        Args:
+            chunk_size (int): size of the source neuron chunks. Default is 100.
+        """
+        print("Stopping the STDP (freezing weights)...")
+
+        for k in range(0, len(self.exc_population), chunk_size):
+            src_chunk = self.exc_population[k : k + chunk_size]
+
+            # Get ALL outgoing STDP connections from this chunk to ANY target 
+            conns = nest.GetConnections(src_chunk, synapse_model="stdp_synapse_rec")
+            
+            # If connections exist, set lambda to 0.0
+            if len(conns) > 0:
+                nest.SetStatus(conns, {"lambda": 0.0})
+
+        print("STDP stopped.")
 
     def print_params(self):
         """
@@ -1084,7 +1106,7 @@ class STDPModel:
                 break
 
             if stop_t_cue is not None and step*step_ms >= stop_t_cue:
-                
+                self.stop_stdp()
                 stop_t_cue = None
         
         #nest.Simulate(self.simulation_params["t_sim"])

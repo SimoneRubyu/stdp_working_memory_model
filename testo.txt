@@ -224,3 +224,6 @@ SERVE FARLA ANCHE PER POPOLAZIONE NON selettiva
 Per farlo bisogna salvare i firing times dei neuroni della pop non selettiva come per le pop selettive
 
 Fatto per la popolazione non selettiva
+
+4 - Implementata la possibilità di disattivare la stdp
+Non  ancora implementata la possibilità di riattivare la stdp

@@ -56,6 +56,8 @@ network_p = {
 tpresim = 3000.0
 # simulation time
 tsim = 6000.0
+# time to stop stdp learning (in ms, if None stdp is active during the whole simulation)
+t_stop_stdp = 4500.0
 
 # simulation params dict
 # here add the parameters to be edited. The rest of the parameters are in default_params.py
@@ -85,7 +87,9 @@ simulation_p = {
         "save_weights" : True,
         # save mip_generator spike times
         "save_mip_spikes" : False
-    }
+    },
+    # time to stop stdp learning (in ms, if None stdp is active during the whole simulation)
+    "t_stop_stdp" : t_stop_stdp
 }
 
 # initialize the network model
