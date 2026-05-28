@@ -390,7 +390,7 @@ sr3 = srs[3]
 sr4 = srs[4]
 sr5 = srs[5] if len(srs) > 5 else None
 
-weight_dict_1 = load_synaptic_weights(data_path + "weights_9000.0.dat")
+weight_dict_1 = load_synaptic_weights(data_path + "weights_"+ str(simulation_params["t_sim"]) + ".dat")
 
 plot_weights_histogram(weight_dict_1, data_path, num="_1")
 

@@ -249,3 +249,12 @@ e le salvi in 4 colonne diverse.
 
 Fatto metodo che salva la struttura della rete in un file .dat
 
+-------------------------------------------------------------------------------------------
+FASE 3: INIZIO STP 
+
+1 - usare protocollo di apprendimento scemo per aumentare i pesi delle 5 popolazioni selettive
+2 - creare il file .py che prenda la struttura della rete finale e generi una rete uguale ma con stp nelle eccitatorie
+
+1 - protocollo di apprendimento scemo per le popolazioni selettive
+
+Si invia il segnale alle 5 popolazioni selettive in maniera graduata (prima la pop0, poi la pop1, ...)

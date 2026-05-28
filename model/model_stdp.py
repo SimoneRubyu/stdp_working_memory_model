@@ -1171,9 +1171,9 @@ class STDPModel:
             if stop_sim:
                 break
 
-            if stop_t_cue is not None and step*step_ms >= stop_t_cue:
+            if stop_t_cue != False and step*step_ms >= stop_t_cue:
                 self.stop_stdp()
-                stop_t_cue = None
+                stop_t_cue = False
         
         #nest.Simulate(self.simulation_params["t_sim"])
         t_sim = time.time() - dum_start
