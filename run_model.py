@@ -57,7 +57,7 @@ tpresim = 3000.0
 # simulation time
 tsim = 6000.0
 # time to stop stdp learning (in ms, if None stdp is active during the whole simulation)
-t_stop_stdp = 4500.0
+t_stop_stdp = 6000.0
 
 # simulation params dict
 # here add the parameters to be edited. The rest of the parameters are in default_params.py
@@ -125,6 +125,9 @@ network.save_spike_data()
 
 # save final synaptic weights to file
 network.save_weights(time=tsim+tpresim)
+
+# save network structure to file
+network.save_network_structure()
 
 # plots a raster plot of all the neurons recorded
 network.raster_plot()

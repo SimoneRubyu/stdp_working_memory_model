@@ -110,6 +110,72 @@ class STDPModel:
                 nest.SetStatus(conns, {"lambda": 0.0})
 
         print("STDP stopped.")
+    
+    def resume_stdp(self, chunk_size:int=100):
+        """
+        Resume STDP plasticity globally by setting the learning rate (lambda) to its original value.
+        Uses chunking over the entire excitatory population to avoid memory issues 
+        and maximize speed.
+
+        Args:
+            chunk_size (int): size of the source neuron chunks. Default is 100.
+        """
+        print("Resuming the STDP (unfreezing weights)...")
+
+        original_lambda = self.network_params["stdp_params"]["lambda"]
+
+        for k in range(0, len(self.exc_population), chunk_size):
+            src_chunk = self.exc_population[k : k + chunk_size]
+
+            # Get ALL outgoing STDP connections from this chunk to ANY target 
+            conns = nest.GetConnections(src_chunk, synapse_model="stdp_synapse_rec")
+            
+            # If connections exist, set lambda back to original value
+            if len(conns) > 0:
+                nest.SetStatus(conns, {"lambda": original_lambda})
+
+        print("STDP resumed.")
+    
+    def save_network_structure(self, chunk_size:int=100):
+        """
+        Saves the network structure in a file named 'network_structure.dat'.
+        """
+
+        print("Saving network structure...")
+        # Get the connection information for all excitatory neurons
+        for k in range(0, len(self.exc_population), chunk_size):
+            src_chunk = self.exc_population[k : k + chunk_size]
+
+            conns_exc = nest.GetConnections(src_chunk)
+
+            if len(conns_exc) > 0:
+                sources_exc = conns_exc.get("source")
+                targets_exc = conns_exc.get("target")
+                weights_exc = conns_exc.get("weight")
+                delays_exc = conns_exc.get("delay")
+
+        # Get the connection information for all inhibitory neurons
+        for k in range(0, len(self.inh_population), chunk_size):
+            src_chunk = self.inh_population[k : k + chunk_size]
+
+            conns_inh = nest.GetConnections(src_chunk)
+
+            if len(conns_inh) > 0:
+                sources_inh = conns_inh.get("source")
+                targets_inh = conns_inh.get("target")
+                weights_inh = conns_inh.get("weight")
+                delays_inh = conns_inh.get("delay")
+            
+            sources = np.concatenate((sources_exc, sources_inh))
+            targets = np.concatenate((targets_exc, targets_inh))
+            weights = np.concatenate((weights_exc, weights_inh))
+            delays = np.concatenate((delays_exc, delays_inh))
+            data = np.array([sources, targets, weights, delays]).T
+
+        np.savetxt(self.simulation_params['data_path'] + "network_structure.dat", data, header="source target weight delay")
+
+        print("Network structure saved.")
+        return None
 
     def print_params(self):
         """

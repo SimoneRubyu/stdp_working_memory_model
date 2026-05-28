@@ -207,6 +207,7 @@ FASE 2: COSE DA FARE
 2 - Cambiare e usare la stessa scala per tutti gli istogrammi dei pesi
 3 - Trovare le caratteristiche delle distriuzioni dei firing rate in vitro/in vivo (media, std, skewness, curtosis) per confronto
 4 - Implementare la possibilità di disattivare e riattivare la stdp al tempo t_stop e t_start
+5 - Implementare la possibilità di salvare la struttura della rete in un file per poi poterla ricaricare quando si vuole
 
 Una volta fatto tutto questo si puo' fare simulazioni grandi (10000 neuroni su pc potente)
 Si confronta la distribuzione dei firing rate prima e dopo l'apprendimento con le distribuzioni reali
@@ -226,4 +227,25 @@ Per farlo bisogna salvare i firing times dei neuroni della pop non selettiva com
 Fatto per la popolazione non selettiva
 
 4 - Implementata la possibilità di disattivare la stdp
-Non  ancora implementata la possibilità di riattivare la stdp
+
+Fatte due funzioni: 
+una per fermare la stdp mettendo lambda a zero e una per far riprendere la stdp riportando lambda al valore originario
+
+3 - trovare le distribuzioni vere per confronto
+
+Trovate varie cose sulle distribuzioni di firing rate durante working memory tasks, sonno REM e durante movimento.
+Ref trovate nella review: "The log-dynamic brain: how skewed distributions affect network operations"
+
+5 - Salvare struttura rete per poterla ricaricare quando si vuole
+
+Si può fare facilmente salvando: Neurone_Sorgente, Neurone_Target, Peso_al_tempo_T, Ritardo in un file .disattivare
+Da questo file si prendono tutte le informazioni e si crea di nuovo la rete con le sinapsi stp e la regola one-to-one
+
+In questo caso però devo sapere a priori a quale popolazione appartiene quel neuorne con quel id
+Serve quindi una mappa esterna che ci dica quali id appartengono a pop0, pop1,...
+
+Serve creare una funzione che prenda le informazioni : "Neurone_Sorgente, Neurone_Target, Peso_al_tempo_T, Ritardo" 
+e le salvi in 4 colonne diverse.
+
+Fatto metodo che salva la struttura della rete in un file .dat
+
