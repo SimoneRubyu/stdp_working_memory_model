@@ -41,8 +41,8 @@ network_p = {
     # current used to go back to the spontaneous activity
     'eta_exc_end': eta_exc - eta_exc,
     # synaptic parameters
-    'syn_params' : {'autapses' : True, 'multapses' : True, 
-                    "J_b" : 0.10, "J_p" : 0.10,
+    'syn_params' : {'autapses' : True, 'multapses' : True,
+                    "J_b" : 0.10, "J_p" : 0.10, "J_IE" : 0.25, "J_EI" : 0.25, "J_II" : 0.20,
                     "start_dist_weights" : {"allow" : True, "std": 0.01}},
     # STDP parameters
     'stdp_params' : {'tau_plus' : 20.0, 'tau_minus' : 20.0, 

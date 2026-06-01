@@ -258,3 +258,16 @@ FASE 3: INIZIO STP
 1 - protocollo di apprendimento scemo per le popolazioni selettive
 
 Si invia il segnale alle 5 popolazioni selettive in maniera graduata (prima la pop0, poi la pop1, ...)
+
+Confermando quanto detto nei test in fase 1: la popolazione inibitoria non sta facendo il suo lavoro
+Infatti, le popolazioni iniziano ad emettere moltissimo con l'iniezione del secondo stimolo alla seconda pop
+I pesi tra popolazioni selettive diverse aumentano perchè non c'è meccanismo WTA
+
+Probabilmente perchè non ci sono abbastanza neuroni o perchè il peso da I -> E è troppo basso
+
+Si è provato ad aumentare il peso J_IE a 0.25 invece che 0.135.
+In questo modo la simulazione non va in crash e il meccanismo WTA inizia a funzionare anche con 1000 neuroni
+Guardando i pesi dei vari collegamenti si trova ciò che ci si aspettava. 
+Pesi potenziati per collegamenti tra stessa popolazione selettiva e pesi di base per collegamenti diversi
+
+

@@ -175,8 +175,8 @@ default_simulation_params = {
     # path in which simulation data will be saved 
     "data_path" : os.path.join(os.getcwd(), 'data/'),
     "overwrite_files": True,
-    # time to stop stdp learning (in ms, if 0 stdp is active during the whole simulation)
-    "t_stop_stdp" : False
+    # time to stop stdp learning (in ms, if -1 stdp is active during the whole simulation)
+    "t_stop_stdp" : -1
 }
 
 """
