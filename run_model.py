@@ -55,9 +55,9 @@ network_p = {
 # presimulation time (i.e. time in which the network stays in the spontaneous activity)
 tpresim = 3000.0
 # simulation time
-tsim = 23000.0
+tsim = 6000.0
 # time to stop stdp learning (in ms, if -1 stdp is active during the whole simulation)
-t_stop_stdp = 6000.0
+t_stop_stdp = -1
 
 t_total = tpresim + tsim
 
@@ -105,9 +105,9 @@ network.add_background_input(start=0.0, stop=t_total)
 #network.add_nonspecific_readout_signal(origin=[tpresim+1100.0])
 
 # to reproduce Figure 1B and 1C
-network.add_item_loading_signals(pop_id=[0, 0], 
-                                 origin=[tpresim, t_stop_stdp+3000.0],
-                                 t_stop=[3000.0, 14000.0])
+network.add_item_loading_signals(pop_id=[0], 
+                                 origin=[tpresim],
+                                 t_stop=[3000.0])
 
 # add item loading signals with mip generator
 # network.add_item_loading_signals_mip(pop_id=[0], origin=[tpresim])

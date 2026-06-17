@@ -249,27 +249,6 @@ e le salvi in 4 colonne diverse.
 
 Fatto metodo che salva la struttura della rete in un file .dat
 
--------------------------------------------------------------------------------------------
-FASE 3: INIZIO STP 
-
-1 - usare protocollo di apprendimento scemo per aumentare i pesi delle 5 popolazioni selettive
-2 - creare il file .py che prenda la struttura della rete finale e generi una rete uguale ma con stp nelle eccitatorie
-
-1 - protocollo di apprendimento scemo per le popolazioni selettive
-
-Si invia il segnale alle 5 popolazioni selettive in maniera graduata (prima la pop0, poi la pop1, ...)
-
-Confermando quanto detto nei test in fase 1: la popolazione inibitoria non sta facendo il suo lavoro
-Infatti, le popolazioni iniziano ad emettere moltissimo con l'iniezione del secondo stimolo alla seconda pop
-I pesi tra popolazioni selettive diverse aumentano perchè non c'è meccanismo WTA
-
-Probabilmente perchè non ci sono abbastanza neuroni o perchè il peso da I -> E è troppo basso
-
-Si è provato ad aumentare il peso J_IE a 0.25 invece che 0.135.
-In questo modo la simulazione non va in crash e il meccanismo WTA inizia a funzionare anche con 1000 neuroni
-Guardando i pesi dei vari collegamenti si trova ciò che ci si aspettava. 
-Pesi potenziati per collegamenti tra stessa popolazione selettiva e pesi di base per collegamenti diversi
-
 ------------------------------------------------------------
 PROBLEMAAAAAAAAAAAAAAAAAAA
 
@@ -291,3 +270,31 @@ Si potrebbero prendere la media e la mediana e usarle come confronto per il mio 
 
 AGGIUNTO METODO DI ANALISI PER FARE ISTOGRAMMA GLOBALE DEI PESI DELLE SINAPSI ECCITATORIE
 
+-------------------------------------------------------------------------------------------
+FASE 3: INIZIO STP 
+
+1 - usare protocollo di apprendimento scemo per aumentare i pesi delle 5 popolazioni selettive
+2 - creare il file .py che prenda la struttura della rete finale e generi una rete uguale ma con stp nelle eccitatorie
+
+1 - protocollo di apprendimento scemo per le popolazioni selettive
+
+Si invia il segnale alle 5 popolazioni selettive in maniera graduata (prima la pop0, poi la pop1, ...)
+
+Confermando quanto detto nei test in fase 1: la popolazione inibitoria non sta facendo il suo lavoro
+Infatti, le popolazioni iniziano ad emettere moltissimo con l'iniezione del secondo stimolo alla seconda pop
+I pesi tra popolazioni selettive diverse aumentano perchè non c'è meccanismo WTA
+
+Probabilmente perchè non ci sono abbastanza neuroni o perchè il peso da I -> E è troppo basso
+
+Si è provato ad aumentare il peso J_IE a 0.25 invece che 0.135.
+In questo modo la simulazione non va in crash e il meccanismo WTA inizia a funzionare anche con 1000 neuroni
+Guardando i pesi dei vari collegamenti si trova ciò che ci si aspettava. 
+Pesi potenziati per collegamenti tra stessa popolazione selettiva e pesi di base per collegamenti diversi
+
+2 - Creazione del modello stp partendo dalla struttura salvata con modello stdp
+Bisogna sapere in anticipo quali id corrispondono a quale popolazione di neuroni.
+Si pensa di creare i neuorni nello stesso modo di come vengono creati nel modello stdp
+Prima si crea la popolazione eccitatoria, poi si crea quella inibitoria.
+Poi si creano delle liste per le popolazioni selettive e la popolazione non selettiva.
+
+Una volta che si hanno tutte le liste ben separate si connettono usando le informazioni 

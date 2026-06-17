@@ -137,47 +137,51 @@ class STDPModel:
                 nest.SetStatus(conns, {"lambda": original_lambda})
 
         print("STDP resumed.")
-    
+
     def save_network_structure(self, chunk_size:int=100):
         """
         Saves the network structure in a file named 'network_structure.dat'.
         """
-
         print("Saving network structure...")
-        # Get the connection information for all excitatory neurons
+        
+        all_sources = []
+        all_targets = []
+        all_weights = []
+        all_delays = []
+        
         for k in range(0, len(self.exc_population), chunk_size):
             src_chunk = self.exc_population[k : k + chunk_size]
-
             conns_exc = nest.GetConnections(src_chunk)
-
+            
             if len(conns_exc) > 0:
-                sources_exc = conns_exc.get("source")
-                targets_exc = conns_exc.get("target")
-                weights_exc = conns_exc.get("weight")
-                delays_exc = conns_exc.get("delay")
+                all_sources.append(conns_exc.get("source"))
+                all_targets.append(conns_exc.get("target"))
+                all_weights.append(conns_exc.get("weight"))
+                all_delays.append(conns_exc.get("delay"))
 
-        # Get the connection information for all inhibitory neurons
         for k in range(0, len(self.inh_population), chunk_size):
             src_chunk = self.inh_population[k : k + chunk_size]
-
             conns_inh = nest.GetConnections(src_chunk)
-
-            if len(conns_inh) > 0:
-                sources_inh = conns_inh.get("source")
-                targets_inh = conns_inh.get("target")
-                weights_inh = conns_inh.get("weight")
-                delays_inh = conns_inh.get("delay")
             
-            sources = np.concatenate((sources_exc, sources_inh))
-            targets = np.concatenate((targets_exc, targets_inh))
-            weights = np.concatenate((weights_exc, weights_inh))
-            delays = np.concatenate((delays_exc, delays_inh))
-            data = np.array([sources, targets, weights, delays]).T
+            if len(conns_inh) > 0:
+                all_sources.append(conns_inh.get("source"))
+                all_targets.append(conns_inh.get("target"))
+                all_weights.append(conns_inh.get("weight"))
+                all_delays.append(conns_inh.get("delay"))
 
-        np.savetxt(self.simulation_params['data_path'] + "network_structure.dat", data, header="source target weight delay")
-
-        print("Network structure saved.")
-        return None
+        if len(all_sources) > 0:
+            sources = np.concatenate(all_sources)
+            targets = np.concatenate(all_targets)
+            weights = np.concatenate(all_weights)
+            delays  = np.concatenate(all_delays)
+            
+            data = np.column_stack((sources, targets, weights, delays))
+            
+            np.savetxt(self.simulation_params['data_path'] + 'network_structure.dat', data, fmt=['%d', '%d', '%.18e', '%.18e'], header="source target weight delay")
+            
+            print(f"Save completed: {len(data)} connections saved in 'network_structure.dat'.")
+        else:
+            print("No connections found in the network.")
 
     def print_params(self):
         """
