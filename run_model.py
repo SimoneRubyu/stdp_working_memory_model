@@ -55,11 +55,11 @@ network_p = {
 # presimulation time (i.e. time in which the network stays in the spontaneous activity)
 tpresim = 3000.0
 # simulation time
-tsim = 6000.0
+tsim = 23000.0
 # time to stop stdp learning (in ms, if -1 stdp is active during the whole simulation)
-t_stop_stdp = -1
+t_stop_stdp = 6000.0
 
-t_total = tpresim + tsim*5
+t_total = tpresim + tsim
 
 # simulation params dict
 # here add the parameters to be edited. The rest of the parameters are in default_params.py
@@ -98,14 +98,16 @@ simulation_p = {
 network = STDPModel(network_p, simulation_p)
 
 # add background
-network.add_background_input(start=0.0, stop=tsim*5+tpresim)
+network.add_background_input(start=0.0, stop=t_total)
 
 # to reproduce Figure 1A
 #network.add_item_loading_signals(pop_id=[0], origin=[tpresim])
 #network.add_nonspecific_readout_signal(origin=[tpresim+1100.0])
 
 # to reproduce Figure 1B and 1C
-network.add_item_loading_signals(pop_id=[0, 1, 2, 3, 4], origin=[tpresim, tpresim+tsim, tpresim+2*tsim, tpresim+3*tsim, tpresim+4*tsim])
+network.add_item_loading_signals(pop_id=[0, 0], 
+                                 origin=[tpresim, t_stop_stdp+3000.0],
+                                 t_stop=[3000.0, 14000.0])
 
 # add item loading signals with mip generator
 # network.add_item_loading_signals_mip(pop_id=[0], origin=[tpresim])

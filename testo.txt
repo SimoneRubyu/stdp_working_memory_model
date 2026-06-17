@@ -270,4 +270,24 @@ In questo modo la simulazione non va in crash e il meccanismo WTA inizia a funzi
 Guardando i pesi dei vari collegamenti si trova ciò che ci si aspettava. 
 Pesi potenziati per collegamenti tra stessa popolazione selettiva e pesi di base per collegamenti diversi
 
+------------------------------------------------------------
+PROBLEMAAAAAAAAAAAAAAAAAAA
+
+Bisogna fare il rework degli stimoli. All'inizio della simulazione la durata dello stimolo è bloccata.
+Non si possono inviare stimoli di durata diversa....
+Per risolverlo bisogna aggiungere la duration in add_item_loading_signal e togliere il T_cue dai parametri dello stimolo
+
+Messo in dizionario item_loading anche l'etichetta stop che è una lista come origin. Dice la durata dello stimolo.
+--------------------------------------------------------------
+
+RICERCA ARTICOLI E FIRING RATE HISTOGRAMS
+
+Trovato articolo sulla risposta a suoni di frequenza diversa da parte di topi. 
+Sono mostrate la media e la mediana di ogni fase. 
+Spontanea, primi 50 ms del segnale sonoro ultimi 50 ms del segnale sonoro e dopo il segnale. 
+Le distribuzioni sono lognormali ma se si plottano con scala logaritmica escono delle gaussiane. 
+Si potrebbero prendere la media e la mediana e usarle come confronto per il mio articolo
+
+
+AGGIUNTO METODO DI ANALISI PER FARE ISTOGRAMMA GLOBALE DEI PESI DELLE SINAPSI ECCITATORIE
 

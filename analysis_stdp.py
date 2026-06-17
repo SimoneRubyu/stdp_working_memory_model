@@ -113,7 +113,7 @@ def raster_plot(data_path):
     ax.set_ylim(0,n_E_frac*len(srs))
     ax.tick_params(labelsize=labelsize)
     for i in range(network_params["item_loading"]["nstim"]):
-        ax.axvspan(network_params["item_loading"]["origin"][i], network_params["item_loading"]["origin"][i]+network_params["stimulation_params"]["T_cue"], (1./len(srs))*i, (1./len(srs))*(i+1), alpha=0.5, color='grey')
+        ax.axvspan(network_params["item_loading"]["origin"][i], network_params["item_loading"]["origin"][i]+network_params["item_loading"]["stop"][i], (1./len(srs))*i, (1./len(srs))*(i+1), alpha=0.5, color='grey')
     if("nonspecific_readout_signals" in network_params):
         for i in range(network_params["nonspecific_readout_signals"]["nstim"]):
             if(i==0):
@@ -339,6 +339,36 @@ def plot_firing_rate_histogram(firing_rates_dict, data_path=None, filename = "")
     # Display the grid on screen
     # plt.show()
 
+def plot_weights_histogram_combined(weights_dict, data_path="", num=""):
+    labelsize = 14
+    titlesize = 16
+    
+    if not weights_dict:
+        print("No data to plot.")
+        return
+
+    all_weights = []
+    for weights in weights_dict.values():
+        all_weights.extend(weights)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    ax.hist(all_weights, bins="auto", alpha=0.7, color='steelblue', edgecolor='black', label='All weights')
+        
+    ax.axvline(17.04, color='blue', linestyle='dashed', linewidth=1.5, label="baseline weight")
+    ax.axvline(76.7, color='red', linestyle='dashed', linewidth=1.5, label="potentiated weight")
+    
+    ax.set_title("Global Synaptic Weights Distribution", fontsize=titlesize)
+    ax.set_xlabel("Synaptic weight", fontsize=labelsize)
+    ax.set_ylabel("Count", fontsize=labelsize)
+    ax.tick_params(axis='both', labelsize=12)
+    ax.legend(loc='upper right')
+
+    plt.tight_layout()
+    ax.loglog()
+    plt.savefig(data_path + "weights_histogram_total" + num + ".png")
+    #plt.show()
+
 def plot_weights_histogram(weights_dict, data_path="", num = ""):
     labelsize = 14
     titlesize = 16
@@ -394,6 +424,8 @@ weight_dict_1 = load_synaptic_weights(data_path + "weights_"+ str(simulation_par
 
 plot_weights_histogram(weight_dict_1, data_path, num="_1")
 
+plot_weights_histogram_combined(weight_dict_1, data_path, num="_1")
+
 
 # print("weights from selective population 1 to selective population 2: ", weight_dict["weights_selective_pop0_to_selective_pop1"][0])
 
@@ -410,7 +442,7 @@ start_time_before = 0.0
 stop_time_before = network_params["item_loading"]["origin"][0]
 
 plot_instantaneus_firing_rate(srs)
-
+"""
 firing_rates_dict_after = {
     "Selective population 0": firing_rate(sr0, start_time=start_time_after, stop_time=stop_time_after),
     "Selective population 1": firing_rate(sr1, start_time=start_time_after, stop_time=stop_time_after),
@@ -432,5 +464,5 @@ firing_rates_dict_before = {
 }
 
 plot_firing_rate_histogram(firing_rates_dict_before, data_path, filename="firing_rate_before")
-
+"""
 # plt.show()

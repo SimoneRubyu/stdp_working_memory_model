@@ -7,6 +7,8 @@ working memory model by Mongillo et al. (2018).
 
 """
 
+from multiprocessing.resource_sharer import stop
+
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -288,7 +290,7 @@ class STDPModel:
         self.network_params.update({'background_input': background_input})
 
 
-    def add_item_loading_signals(self, pop_id:list=[0], origin:list=[1000.0]):
+    def add_item_loading_signals(self, pop_id:list=[0], origin:list=[1000.0], t_stop:list=[0.0]):
         """
         Add item loading signal to the pop_id-th excitatory population using the parameters previously given.
 
@@ -309,7 +311,8 @@ class STDPModel:
             item_loading = {
                 'nstim': len(pop_id) ,
                 'pop_id': pop_id,
-                'origin': origin
+                'origin': origin,
+                'stop' : t_stop
                 }
 
             self.network_params.update({'item_loading': item_loading})
@@ -605,6 +608,7 @@ class STDPModel:
         eta_exc = self.network_params["eta_exc"]
         Sigma_exc = 0.0 #self.network_params["Sigma_exc"] #0.0
         origin = self.network_params["item_loading"]["origin"]
+        t_stop = self.network_params["item_loading"]["stop"]
 
         for item in range(self.network_params["item_loading"]["nstim"]):
             cue, std_cue = noise_params(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0], dt=self.network_params["stimulation_params"]["dt_external_stim"])
@@ -615,7 +619,7 @@ class STDPModel:
                 nest.SetStatus(I_cue, {"rate" : rate_cue,
                                    "origin" : origin[item],
                                    "start" : 0.0,
-                                   "stop" : self.network_params["stimulation_params"]["T_cue"]})
+                                   "stop" : t_stop[item]})
             else:
                 I_cue = nest.Create("noise_generator")
                 nest.SetStatus(I_cue, {"mean" : cue,
@@ -623,7 +627,7 @@ class STDPModel:
                                     "dt" : self.network_params["stimulation_params"]["dt_external_stim"],
                                     "origin" : origin[item],
                                     "start" : 0.0,
-                                    "stop" : self.network_params["stimulation_params"]["T_cue"]})
+                                    "stop" : t_stop[item]})
                 
             self.item_loading_signals.append(I_cue)
 
@@ -1205,9 +1209,9 @@ class STDPModel:
         if ("item_loading" in self.network_params):
             for i in range(self.network_params["item_loading"]["nstim"]):
                 if(i==0):
-                    ax.axvspan(self.network_params["item_loading"]["origin"][i], self.network_params["item_loading"]["origin"][i]+self.network_params["stimulation_params"]["T_cue"], alpha=0.5, color='grey', label="Item Loading")
+                    ax.axvspan(self.network_params["item_loading"]["origin"][i], self.network_params["item_loading"]["origin"][i]+self.network_params["item_loading"]["stop"][i], alpha=0.5, color='grey', label="Item Loading")
                 else:
-                    ax.axvspan(self.network_params["item_loading"]["origin"][i], self.network_params["item_loading"]["origin"][i]+self.network_params["stimulation_params"]["T_cue"], alpha=0.5, color='grey')
+                    ax.axvspan(self.network_params["item_loading"]["origin"][i], self.network_params["item_loading"]["origin"][i]+self.network_params["item_loading"]["stop"][i], alpha=0.5, color='grey')
         if("nonspecific_readout_signals" in self.network_params):
             for i in range(self.network_params["nonspecific_readout_signals"]["nstim"]):
                 if(i==0):
