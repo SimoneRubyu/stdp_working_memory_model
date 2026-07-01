@@ -298,3 +298,44 @@ Prima si crea la popolazione eccitatoria, poi si crea quella inibitoria.
 Poi si creano delle liste per le popolazioni selettive e la popolazione non selettiva.
 
 Una volta che si hanno tutte le liste ben separate si connettono usando le informazioni 
+
+Per qualche motivo gli id dei neuroni sul file partono da 2 e arrivano a 1001.
+Mentre se si creano sull'altro file .py partono da 1 e arrivano a 1000.
+Quello che si può fare è modificare i valori degli id del file .dat:
+in questo caso sottrarre 1 a tutti gli id source e target
+FUNZIONA. Ora bisogna dividere neuroni eccitatori dai neuroni inibitori perchè hanno parametri diversi
+Però gli id non dovrebbero cambiare se si creano in sequenza. CORRETTO, FATTO
+
+Ora bisogna fare in modo che le connessioni tra neuroni exc siano stp mentre le restanti siano statiche
+probabilmente serve fare due connect: FATTO
+
+Ora si può creare la struttura della rete uguale ma con le sinapsi stp tra neuroni eccitatori
+Si usa il modello stp vecchio e si aggiungono/cancellano le cose
+
+metodi da cambiare:
+Si parte da build_network. create_population forse può rimanere così, 
+tanto crea la suddivisione delle popolazioni li. Serve aggiornare le info dei dizionari
+con i dizionari della simulazione precedente, mi sa con update. 
+è da modificare molto il connect_population.
+Probabilmente non serve modificare le cose, ma basta aggiungere dei metodi che permettono di caricare
+le cose da file.
+
+COSE DA FARE
+
+1 - creare metodo per prendere i parametri da file json della cartella data di simulazione stdp
+e caricarla nei dizionari interni. Poi si può richiamare il metodo save_params
+
+In realtà non serve creare un nuovo metodo perchè le cose le fa già il metodo init.
+Quindi è da fare tutto nel file python dove si esegue il modello: run_fromfile_model.py
+Gli unici dati sono N_exc e N_inh, quindi non ci sono troppi problemi
+
+2 - creare metodo che connette le popolazioni guardando il file della struttura della rete
+
+
+FINITO TUTTO E FUNZIONA
+
+Ora si fa una simulazione in cui si potenziano tutti i pesi delle pop selettive
+
+NON FUNZIONA IL MODELLO STDP CON LA VECCHIA VERSIONE................................................
+NON FUNZIONA IL save_weights
+VABBE', LA PROSSIMA VOLTA

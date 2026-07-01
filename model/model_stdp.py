@@ -148,7 +148,7 @@ class STDPModel:
         all_targets = []
         all_weights = []
         all_delays = []
-        
+
         for k in range(0, len(self.exc_population), chunk_size):
             src_chunk = self.exc_population[k : k + chunk_size]
             conns_exc = nest.GetConnections(src_chunk)
@@ -301,6 +301,7 @@ class STDPModel:
         Args:
             pop_id (list of int): population ID to which the items are loaded.
             origin (list of float): the origin of the item loading stimulations (in ms).
+            t_stop (list of float): duration of the item loading stimulations (in ms).
 
         """
 
@@ -1111,8 +1112,6 @@ class STDPModel:
                 N_neur_non_sel = int(self.network_params["N_exc"]*(1.0 - self.f*self.p)*self.simulation_params["recording_params"]["fraction_pop_recorded"])
                 nest.Connect(self.exc_populations[pop_id][0:N_neur_non_sel], self.spike_recorders[i])
             
-            
-
         print("Done")
     
     

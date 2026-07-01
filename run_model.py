@@ -42,7 +42,7 @@ network_p = {
     'eta_exc_end': eta_exc - eta_exc,
     # synaptic parameters
     'syn_params' : {'autapses' : True, 'multapses' : True,
-                    "J_b" : 0.10, "J_p" : 0.10, "J_IE" : 0.25, "J_EI" : 0.25, "J_II" : 0.20,
+                    "J_b" : 0.10, "J_p" : 0.10, "J_IE" : 0.28, "J_EI" : 0.25, "J_II" : 0.20,
                     "start_dist_weights" : {"allow" : True, "std": 0.01}},
     # STDP parameters
     'stdp_params' : {'tau_plus' : 20.0, 'tau_minus' : 20.0, 
@@ -55,7 +55,7 @@ network_p = {
 # presimulation time (i.e. time in which the network stays in the spontaneous activity)
 tpresim = 3000.0
 # simulation time
-tsim = 6000.0
+tsim = 28500.0
 # time to stop stdp learning (in ms, if -1 stdp is active during the whole simulation)
 t_stop_stdp = -1
 
@@ -79,7 +79,7 @@ simulation_p = {
         # fraction of neurons recorded for each selective population
         "fraction_pop_recorded" : 1.0,
         # fraction of neurons recorded for weight distribution
-        "fraction_weights_recorded" : 0.01,
+        "fraction_weights_recorded" : 1.0,
         # selective excitatory population recorded (0, ..., p-1)
         "pop_recorded" : [0, 1, 2, 3, 4, 5],
         "spike_recording_params": {"start": 100.0},
@@ -105,9 +105,9 @@ network.add_background_input(start=0.0, stop=t_total)
 #network.add_nonspecific_readout_signal(origin=[tpresim+1100.0])
 
 # to reproduce Figure 1B and 1C
-network.add_item_loading_signals(pop_id=[0], 
-                                 origin=[tpresim],
-                                 t_stop=[3000.0])
+network.add_item_loading_signals(pop_id=[0, 1, 2, 3, 4], 
+                                 origin=[3000.0, 9000.0, 14500.0, 20000.0, 25500.0],
+                                 t_stop=[5000.0, 5000.0, 5000.0, 5000.0, 5000.0])
 
 # add item loading signals with mip generator
 # network.add_item_loading_signals_mip(pop_id=[0], origin=[tpresim])
