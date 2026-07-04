@@ -150,6 +150,7 @@ class STDPModel:
         all_delays = []
 
         for k in range(0, len(self.exc_population), chunk_size):
+            print("chunk exc: ", k)
             src_chunk = self.exc_population[k : k + chunk_size]
             conns_exc = nest.GetConnections(src_chunk)
             
@@ -160,6 +161,7 @@ class STDPModel:
                 all_delays.append(conns_exc.get("delay"))
 
         for k in range(0, len(self.inh_population), chunk_size):
+            print("chunk inh: ", k)
             src_chunk = self.inh_population[k : k + chunk_size]
             conns_inh = nest.GetConnections(src_chunk)
             
@@ -294,7 +296,7 @@ class STDPModel:
         self.network_params.update({'background_input': background_input})
 
 
-    def add_item_loading_signals(self, pop_id:list=[0], origin:list=[1000.0], t_stop:list=[0.0]):
+    def add_item_loading_signals(self, pop_id:list=[0], origin:list=[0.0], t_stop:list=[0.0]):
         """
         Add item loading signal to the pop_id-th excitatory population using the parameters previously given.
 
@@ -1106,11 +1108,15 @@ class STDPModel:
         print("Connecting recording devices...", end = ' ')
         for i in range(len(self.spike_recorders)):
             pop_id = self.simulation_params["recording_params"]["pop_recorded"][i]
-            N_neurons_recorded = int(self.network_params["N_exc"]*self.f*self.simulation_params["recording_params"]["fraction_pop_recorded"])
-            nest.Connect(self.exc_populations[pop_id][0:N_neurons_recorded], self.spike_recorders[i])
+            if i < 5: # selective populations
+                N_neurons_recorded = int(self.network_params["N_exc"]*self.f*self.simulation_params["recording_params"]["fraction_pop_recorded"])
+                nest.Connect(self.exc_populations[pop_id][0:N_neurons_recorded], self.spike_recorders[i])
             if i == 5: # non selective population
                 N_neur_non_sel = int(self.network_params["N_exc"]*(1.0 - self.f*self.p)*self.simulation_params["recording_params"]["fraction_pop_recorded"])
                 nest.Connect(self.exc_populations[pop_id][0:N_neur_non_sel], self.spike_recorders[i])
+            if i == 6: # inhibitory population
+                N_neur_inh = int(self.network_params["N_inh"]*self.simulation_params["recording_params"]["fraction_pop_recorded"])
+                nest.Connect(self.inh_population[0:N_neur_inh], self.spike_recorders[i])
             
         print("Done")
     
@@ -1200,11 +1206,17 @@ class STDPModel:
         colors = ["blue", "red", "green", "orange", "olive"]
         if len(self.spike_recorders) == 6:
             colors.append("purple")
+        if len(self.spike_recorders) == 7:
+            colors.append("purple")
+            colors.append("black")
         for i in range(len(self.spike_recorders)):
             sr = self.spike_recorders[i].get("events")
-            ax.plot(sr["times"], sr["senders"], '.', color = colors[i%len(colors)], label="Selective population {}".format(self.simulation_params["recording_params"]["pop_recorded"][i]))
+            if i < 5:
+                ax.plot(sr["times"], sr["senders"], '.', color = colors[i%len(colors)], label="Selective population {}".format(self.simulation_params["recording_params"]["pop_recorded"][i]))
             if i == 5:
                 ax.plot(sr["times"], sr["senders"], '.', color = colors[i%len(colors)], label="Non-selective population")
+            if i == 6:
+                ax.plot(sr["times"], sr["senders"], '.', color = colors[i%len(colors)], label="Inhibitory population")
 
         ax.set_ylabel("# cell", fontsize=axfont)
         ax.set_xlabel("Time [ms]", fontsize=axfont)

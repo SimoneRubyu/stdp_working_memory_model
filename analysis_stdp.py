@@ -25,6 +25,8 @@ def load_spike_data(overlap = False):
     # Checks if there is the spike data for the non selective pop
     if os.path.isfile(data_path + "spikedata5.dat"):
         n_spike_dats += 1
+    if os.path.isfile(data_path + "spikedata6.dat"):
+        n_spike_dats += 1
     
     if(overlap==False):
         srs = [np.loadtxt(data_path + "spikedata"+str(i)+".dat") for i in range(n_spike_dats)]
@@ -237,14 +239,30 @@ def instantaneus_firing_rate(sr, binwidth = 25):
     else:
         time5 = []
         fr5 = []
+    
+    # inhibitory population
+    if(np.size(sr[6]) > 2):
+        fr6 = sr[6][:,1]
+        frmax6 = np.max(np.abs(fr6))
+        lim6 = (int(frmax6/binwidth) + 1) * binwidth
+        bins6 = np.arange(0, lim6 + binwidth, binwidth)
+        
+        h6 = np.histogram(fr6, bins=bins6)[0:2]
+        # frequency in Hz per bin, nomalized
+        fr6 = (h6[0]/(binwidth/1000.0))/(network_params["N_inh"])
+        # time of the center of each bin
+        time6 = [(h6[1][i]+h6[1][i+1])/2.0 for i in range(len(h6[0]))]
+    else:
+        time6 = []
+        fr6 = []
 
-    return time0, fr0, time1, fr1, time2, fr2, time3, fr3, time4, fr4, time5, fr5
+    return time0, fr0, time1, fr1, time2, fr2, time3, fr3, time4, fr4, time5, fr5, time6, fr6
 
 def plot_instantaneus_firing_rate(sr, data_path=data_path):
     labelsize=19
     titlesize=20
 
-    time0, fr0, time1, fr1, time2, fr2, time3, fr3, time4, fr4, time5, fr5 = instantaneus_firing_rate(sr, binwidth = 25)
+    time0, fr0, time1, fr1, time2, fr2, time3, fr3, time4, fr4, time5, fr5, time6, fr6 = instantaneus_firing_rate(sr, binwidth = 25)
 
     fig, ax = plt.subplots(figsize=(15,10))
     if(time0!=[]):
@@ -271,7 +289,10 @@ def plot_instantaneus_firing_rate(sr, data_path=data_path):
         ax.plot(time5, fr5, color='purple', label="Non-selective population")
     else:
         ax.axhline(0, color='purple', label="Non-selective population")
-
+    if(time6!=[]):
+        ax.plot(time6, fr6, color='black', label="Inhibitory population")
+    else:
+        ax.axhline(0, color='black', label="Inhibitory population")
     ax.set_ylabel("Firing rate [Hz]", fontsize=labelsize)
     ax.set_xlabel("Time [ms]", fontsize=labelsize)
     ax.set_xlim(0, simulation_params["t_sim"]+500)
@@ -281,6 +302,23 @@ def plot_instantaneus_firing_rate(sr, data_path=data_path):
     plt.savefig(data_path+"instantaneous_firing_rate.png")
     plt.draw()
 
+def firing_rate(t_start, t_stop, sr):
+    
+    SE = sr
+    dum = SE[:,1]
+    dum = (dum > t_start) & (dum < t_stop )
+    print("Start firing rate calculation at {} ms and stop at {} ms".format(t_start, t_stop))
+    # neuron that emitted the spikes in that range
+    senders = [i for (i, dum) in zip(SE[:,0], dum) if dum]
+    N_neurons_recorded = int(network_params["N_exc"]*network_params["f"]*simulation_params["recording_params"]["fraction_pop_recorded"])
+    ids = np.arange(np.min(senders), np.min(senders)+N_neurons_recorded)
+    #print(len(ids))
+    # count firing rate for each neuron
+    occ = [[x,1000.0*senders.count(x)/(t_stop-t_start)] for x in ids]
+    print("Average firing rate: {:.2} Hz".format((len(senders)*1000.0/(t_stop-t_start))/len(ids)))
+    #dum = SE["times"]
+    return(occ)
+"""
 def firing_rate(sr, start_time, stop_time, data_path=data_path):
     # Calculate the firing rate for each neuron in the time window [start_time, stop_time]
 
@@ -295,7 +333,7 @@ def firing_rate(sr, start_time, stop_time, data_path=data_path):
     firing_rate = counts / ((stop_time - start_time) / 1000.0)
 
     return firing_rate
-
+"""
 def plot_firing_rate_histogram(firing_rates_dict, data_path=None, filename = ""):
     
     num_pops = len(firing_rates_dict)
@@ -419,6 +457,7 @@ sr2 = srs[2]
 sr3 = srs[3]
 sr4 = srs[4]
 sr5 = srs[5] if len(srs) > 5 else None
+sr6 = srs[6] if len(srs) > 6 else None
 
 weight_dict_1 = load_synaptic_weights(data_path + "weights_"+ str(simulation_params["t_sim"]) + ".dat")
 
@@ -435,32 +474,33 @@ plot_weights_histogram_combined(weight_dict_1, data_path, num="_1")
 
 # plt.show()
 
-start_time_after = network_params["item_loading"]["origin"][0] + network_params["stimulation_params"]["T_cue"]
-stop_time_after = simulation_params["t_sim"]
+start_time_after = 0.0
+stop_time_after = 9000.0
 
 start_time_before = 0.0
 stop_time_before = network_params["item_loading"]["origin"][0]
 
 plot_instantaneus_firing_rate(srs)
-"""
+
 firing_rates_dict_after = {
-    "Selective population 0": firing_rate(sr0, start_time=start_time_after, stop_time=stop_time_after),
-    "Selective population 1": firing_rate(sr1, start_time=start_time_after, stop_time=stop_time_after),
-    "Selective population 2": firing_rate(sr2, start_time=start_time_after, stop_time=stop_time_after),
-    "Selective population 3": firing_rate(sr3, start_time=start_time_after, stop_time=stop_time_after),
-    "Selective population 4": firing_rate(sr4, start_time=start_time_after, stop_time=stop_time_after),
-    "Non selective population": firing_rate(sr5, start_time=start_time_after, stop_time=stop_time_after) if sr5 is not None else []
+    "Selective population 0": firing_rate(sr=sr0, t_start=start_time_after, t_stop=stop_time_after),
+    "Selective population 1": firing_rate(sr=sr1, t_start=start_time_after, t_stop=stop_time_after),
+    "Selective population 2": firing_rate(sr=sr2, t_start=start_time_after, t_stop=stop_time_after),
+    "Selective population 3": firing_rate(sr=sr3, t_start=start_time_after, t_stop=stop_time_after),
+    "Selective population 4": firing_rate(sr=sr4, t_start=start_time_after, t_stop=stop_time_after),
+    "Non selective population": firing_rate(sr=sr5, t_start=start_time_after, t_stop=stop_time_after) if sr5 is not None else [],
+    "Inhibitory population": firing_rate(sr=sr6, t_start=start_time_after, t_stop=stop_time_after) if sr6 is not None else []
 }
 
 plot_firing_rate_histogram(firing_rates_dict_after, data_path, filename="firing_rate_after")
-
+"""
 firing_rates_dict_before = {
-    "Selective population 0": firing_rate(sr0, start_time=start_time_before, stop_time=stop_time_before),
-    "Selective population 1": firing_rate(sr1, start_time=start_time_before, stop_time=stop_time_before),
-    "Selective population 2": firing_rate(sr2, start_time=start_time_before, stop_time=stop_time_before),
-    "Selective population 3": firing_rate(sr3, start_time=start_time_before, stop_time=stop_time_before),  
-    "Selective population 4": firing_rate(sr4, start_time=start_time_before, stop_time=stop_time_before),
-    "Non selective population": firing_rate(sr5, start_time=start_time_before, stop_time=stop_time_before) if sr5 is not None else []
+    "Selective population 0": firing_rate(sr=sr0, t_start=start_time_before, t_stop=stop_time_before),
+    "Selective population 1": firing_rate(sr=sr1, t_start=start_time_before, t_stop=stop_time_before),
+    "Selective population 2": firing_rate(sr=sr2, t_start=start_time_before, t_stop=stop_time_before),
+    "Selective population 3": firing_rate(sr=sr3, t_start=start_time_before, t_stop=stop_time_before),  
+    "Selective population 4": firing_rate(sr=sr4, t_start=start_time_before, t_stop=stop_time_before),
+    "Non selective population": firing_rate(sr=sr5, t_start=start_time_before, t_stop=stop_time_before) if sr5 is not None else []
 }
 
 plot_firing_rate_histogram(firing_rates_dict_before, data_path, filename="firing_rate_before")
