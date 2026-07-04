@@ -28,21 +28,27 @@ else:
 # Fig 2C - 24.1 (bi-stable activity with asynchronous spiking activity)
 
 # average variation of membrane potential elicited by external current [mV]
-eta_exc = 19.7
+eta_exc = 17.7
+# inhibitory input current [mV]
+eta_inh = 17.7
 # network params dict
 # here add the parameters to be edited. The rest of the parameters are in model/default_params.py
 network_p = {
     # network parameters
     'N_exc': 800,
     'N_inh': 200,
+    # probability of synaptic contact
+    'c' : 0.30,
     # excitatory input current [mV]
     'eta_exc': eta_exc,
+    # inhibitory input current [mV]
+    'eta_inh': eta_inh,
     'poisson_bkg':{'allow': True},
     # current used to go back to the spontaneous activity
     'eta_exc_end': eta_exc - eta_exc,
     # synaptic parameters
     'syn_params' : {'autapses' : True, 'multapses' : True,
-                    "J_b" : 0.10, "J_p" : 0.10, "J_IE" : 0.20, "J_EI" : 0.25, "J_II" : 0.20,
+                    "J_b" : 0.010, "J_p" : 0.010, "J_IE" : 0.135, "J_EI" : 0.25, "J_II" : 0.20,
                     "start_dist_weights" : {"allow" : True, "std": 0.01}},
     # STDP parameters
     'stdp_params' : {'tau_plus' : 20.0, 'tau_minus' : 20.0, 
@@ -55,7 +61,7 @@ network_p = {
 # presimulation time (i.e. time in which the network stays in the spontaneous activity)
 tpresim = 3000.0
 # simulation time
-tsim = 6000.0
+tsim = 15000.0
 # tsim = 28500.0
 # time to stop stdp learning (in ms, if -1 stdp is active during the whole simulation)
 t_stop_stdp = -1

@@ -23,6 +23,7 @@ from copy import deepcopy
 from model.default_params import default_network_params, default_simulation_params
 from model.default_params import update_params, check_params
 from model.model_helpers import get_weight, noise_params, get_rate_and_weight_poisson, lognormal_params
+from scipy.stats import truncnorm
 
 
 
@@ -829,6 +830,10 @@ class STDPModel:
         std_b_pA = get_weight(self.network_params["syn_params"]["start_dist_weights"]["std"], self.network_params["neur_params"]["tau"][0])
 
         allow_dist = self.network_params["syn_params"]["start_dist_weights"]["allow"]
+        seed_truncnorm = np.random.seed(seed = self.simulation_params["master_seed"])
+        a_p = (0.0 - J_p_pA) / std_p_pA
+        a_b = (0.0 - J_b_pA) / std_b_pA
+        b = np.inf
 
         print("Connecting the neuron populations...", end = ' ')
         for i in range(self.p):
@@ -852,7 +857,7 @@ class STDPModel:
                                 "mu_minus": self.network_params["stdp_params"]["mu_minus"],
                                 "Wmax": self.network_params["stdp_params"]["Wmax"],
                                 "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
-                                "weight": nest.random.normal(mean = J_p_pA, std = std_p_pA) if allow_dist else J_p_pA}
+                                "weight": [truncnorm.rvs(a=a_p, b=b, loc=J_p_pA, scale=std_p_pA, size=con_dict['indegree'], random_state=seed_truncnorm) for i in range(len(self.exc_populations[i]))] if allow_dist else J_p_pA}
                     nest.Connect(self.exc_populations[j], self.exc_populations[i], con_dict, syn_dict)
                 else:
                     # Creation of synapses between different selective populations
@@ -868,7 +873,7 @@ class STDPModel:
                                 "mu_minus": self.network_params["stdp_params"]["mu_minus"],
                                 "Wmax": self.network_params["stdp_params"]["Wmax"],
                                 "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
-                                "weight": nest.random.normal(mean = J_b_pA, std = std_b_pA) if allow_dist else J_b_pA}
+                                "weight": [truncnorm.rvs(a=a_b, b=b, loc=J_b_pA, scale=std_b_pA, size=con_dict['indegree'], random_state=seed_truncnorm) for i in range(len(self.exc_populations[i]))] if allow_dist else J_b_pA}
                     nest.Connect(self.exc_populations[j], self.exc_populations[i], con_dict, syn_dict)
             
             # indegrees from the other exc neurons
@@ -886,13 +891,13 @@ class STDPModel:
                                 "mu_minus": self.network_params["stdp_params"]["mu_minus"],
                                 "Wmax": self.network_params["stdp_params"]["Wmax"],
                                 "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
-                                "weight": nest.random.normal(mean = J_b_pA, std = std_b_pA) if allow_dist else J_b_pA}
+                                "weight": [truncnorm.rvs(a=a_b, b=b, loc=J_b_pA, scale=std_b_pA, size=con_dict['indegree'], random_state=seed_truncnorm) for i in range(len(self.exc_populations[i]))] if allow_dist else J_b_pA}
             nest.Connect(self.exc_populations[-1], self.exc_populations[i], con_dict, syn_dict)
 
             if(self.network_params["syn_params"]["gamma_0"] > 0.0):
                 con_dict['indegree'] = int(self.network_params["syn_params"]["gamma_0"]*self.c*(1.0-self.f*self.p)*self.network_params["N_exc"])
 
-                syn_dict["weight"] = nest.random.normal(mean = J_p_pA, std = std_p_pA) if allow_dist else J_p_pA
+                syn_dict["weight"] = [truncnorm.rvs(a=a_p, b=b, loc=J_p_pA, scale=std_p_pA, size=con_dict['indegree'], random_state=seed_truncnorm) for i in range(len(self.exc_populations[i]))] if allow_dist else J_p_pA
                 nest.Connect(self.exc_populations[-1], self.exc_populations[i], con_dict, syn_dict)
 
             # indegrees from the inh pop
@@ -957,7 +962,7 @@ class STDPModel:
                                 "mu_minus": self.network_params["stdp_params"]["mu_minus"],
                                 "Wmax": self.network_params["stdp_params"]["Wmax"],
                                 "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
-                                "weight": nest.random.normal(mean = J_b_pA, std = std_b_pA) if allow_dist else J_b_pA}
+                                "weight": [truncnorm.rvs(a=a_b, b=b, loc=J_b_pA, scale=std_b_pA, size=con_dict['indegree'], random_state=seed_truncnorm) for i in range(len(self.exc_populations[-1]))] if allow_dist else J_b_pA}
             nest.Connect(self.exc_populations[i], self.exc_populations[-1], con_dict, syn_dict)
 
         # indegrees from the rest of the exc pop
@@ -974,7 +979,7 @@ class STDPModel:
                                 "mu_minus": self.network_params["stdp_params"]["mu_minus"],
                                 "Wmax": self.network_params["stdp_params"]["Wmax"],
                                 "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
-                                "weight": nest.random.normal(mean = J_b_pA, std = std_b_pA) if allow_dist else J_b_pA}
+                                "weight": [truncnorm.rvs(a=a_b, b=b, loc=J_b_pA, scale=std_b_pA, size=con_dict['indegree'], random_state=seed_truncnorm) for i in range(len(self.exc_populations[-1]))] if allow_dist else J_b_pA}
         nest.Connect(self.exc_populations[-1], self.exc_populations[-1], con_dict, syn_dict)
 
         if(self.network_params["syn_params"]["gamma_0"] > 0.0):
@@ -989,7 +994,7 @@ class STDPModel:
                                     "mu_minus": self.network_params["stdp_params"]["mu_minus"],
                                     "Wmax": self.network_params["stdp_params"]["Wmax"],
                                     "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
-                                    "weight": nest.random.normal(mean = J_p_pA, std = std_p_pA) if allow_dist else J_p_pA}
+                                    "weight": [truncnorm.rvs(a=a_p, b=b, loc=J_p_pA, scale=std_p_pA, size=con_dict['indegree'], random_state=seed_truncnorm) for i in range(len(self.exc_populations[-1]))] if allow_dist else J_p_pA}
             nest.Connect(self.exc_populations[-1], self.exc_populations[-1], con_dict, syn_dict)
 
         # indegrees from the inh pop
