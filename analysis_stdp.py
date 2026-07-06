@@ -403,7 +403,6 @@ def plot_weights_histogram_combined(weights_dict, data_path="", num=""):
     ax.legend(loc='upper right')
 
     plt.tight_layout()
-    ax.loglog()
     plt.savefig(data_path + "weights_histogram_total" + num + ".png")
     #plt.show()
 
@@ -432,7 +431,6 @@ def plot_weights_histogram(weights_dict, data_path="", num = ""):
         
         ax.hist(weights, bins="auto", alpha=0.7, color='steelblue', edgecolor='black')
         ax.axvline(17.04, color='blue', linestyle='dashed', linewidth=1.5, label="baseline weight")
-        ax.axvline(76.7, color='red', linestyle='dashed', linewidth=1.5, label="potentiated weight")
         
         ax.set_title(connection, fontsize=titlesize)
         ax.set_xlabel("Synaptic weight", fontsize=labelsize)
@@ -477,9 +475,6 @@ plot_weights_histogram_combined(weight_dict_1, data_path, num="_1")
 start_time_after = 0.0
 stop_time_after = 9000.0
 
-start_time_before = 0.0
-stop_time_before = network_params["item_loading"]["origin"][0]
-
 plot_instantaneus_firing_rate(srs)
 
 firing_rates_dict_after = {
@@ -492,7 +487,7 @@ firing_rates_dict_after = {
     "Inhibitory population": firing_rate(sr=sr6, t_start=start_time_after, t_stop=stop_time_after) if sr6 is not None else []
 }
 
-plot_firing_rate_histogram(firing_rates_dict_after, data_path, filename="firing_rate_after")
+#plot_firing_rate_histogram(firing_rates_dict_after, data_path, filename="firing_rate_after")
 """
 firing_rates_dict_before = {
     "Selective population 0": firing_rate(sr=sr0, t_start=start_time_before, t_stop=stop_time_before),
