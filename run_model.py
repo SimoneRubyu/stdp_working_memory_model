@@ -28,7 +28,7 @@ else:
 # Fig 2C - 24.1 (bi-stable activity with asynchronous spiking activity)
 
 # average variation of membrane potential elicited by external current [mV]
-eta_exc = 21.7
+eta_exc = 23.7
 # inhibitory input current [mV]
 eta_inh = 20.5
 # network params dict
@@ -48,20 +48,20 @@ network_p = {
     'eta_exc_end': eta_exc - eta_exc,
     # synaptic parameters
     'syn_params' : {'autapses' : True, 'multapses' : True,
-                    "J_b" : 0.10, "J_p" : 0.10, "J_IE" : 0.135, "J_EI" : 0.25, "J_II" : 0.20,
+                    "J_b" : 0.10, "J_p" : 0.10, "J_IE" : 0.45, "J_EI" : 0.45, "J_II" : 0.45,
                     "start_dist_weights" : {"allow" : True, "std": 0.01}},
     # STDP parameters
     'stdp_params' : {'tau_plus' : 20.0, 'tau_minus' : 20.0, 
-                     'lambda' : 0.04, 'alpha' : 1.0,
-                     'mu_plus' : 1.0, 'mu_minus' : 1.0,
-                     'Wmax' : 150.0},
+                     'lambda' : 0.1, 'alpha' : 0.4228,
+                     'mu_plus' : 0.4, 'mu_minus' : 1.0,
+                     'Wmax' : 100.0},
     # item loading parameters
     'stimulation_params' : {'T_cue' : 3000.0, 'A_cue' : 1.10 , "correlation_c": 0.45}}
 
 # presimulation time (i.e. time in which the network stays in the spontaneous activity)
 tpresim = 3000.0
 # simulation time
-tsim = 10500.0
+tsim = 25000.0
 # tsim = 20000.0
 # time to stop stdp learning (in ms, if -1 stdp is active during the whole simulation)
 t_stop_stdp = -1
@@ -112,9 +112,9 @@ network.add_background_input(start=0.0, stop=t_total)
 #network.add_nonspecific_readout_signal(origin=[tpresim+1100.0])
 
 # to reproduce Figure 1B and 1C
-network.add_item_loading_signals(pop_id=[0, 1, 0], 
-                                 origin=[3000.0, 6500.0, 10000.0],
-                                 t_stop=[3000.0, 3000.0, 3000.0])
+#network.add_item_loading_signals(pop_id=[0, 1, 0], 
+#                                 origin=[3000.0, 6500.0, 10000.0],
+#                                 t_stop=[3000.0, 3000.0, 3000.0])
 
 #                                 origin=[3000.0, 7000.0, 11000.0, 15000.0, 19000.0],
 #                                 t_stop=[3000.0, 3000.0, 3000.0, 3000.0, 3000.0]

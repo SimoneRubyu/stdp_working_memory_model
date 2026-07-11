@@ -829,6 +829,11 @@ class STDPModel:
         J_b_pA = get_weight(self.network_params["syn_params"]["J_b"], self.network_params["neur_params"]["tau"][0])
         std_b_pA = get_weight(self.network_params["syn_params"]["start_dist_weights"]["std"], self.network_params["neur_params"]["tau"][0])
 
+        print("J base pA=", J_b_pA)
+        print("J_IE pA", get_weight(self.network_params["syn_params"]["J_IE"], self.network_params["neur_params"]["tau"][1]))
+        print("J_EI pA", get_weight(-self.network_params["syn_params"]["J_EI"], self.network_params["neur_params"]["tau"][1]))
+        print("J_II pA", get_weight(-self.network_params["syn_params"]["J_II"], self.network_params["neur_params"]["tau"][1]))
+
         allow_dist = self.network_params["syn_params"]["start_dist_weights"]["allow"]
         seed_truncnorm = np.random.seed(seed = self.simulation_params["master_seed"])
         a_p = (0.0 - J_p_pA) / std_p_pA

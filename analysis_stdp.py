@@ -473,7 +473,7 @@ plot_weights_histogram_combined(weight_dict_1, data_path, num="_1")
 # plt.show()
 
 start_time_after = 0.0
-stop_time_after = 9000.0
+stop_time_after = 28000.0
 
 plot_instantaneus_firing_rate(srs)
 
