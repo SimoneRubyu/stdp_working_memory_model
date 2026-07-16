@@ -925,7 +925,7 @@ class STDPModel:
             con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.f*self.c*self.network_params["N_exc"]),
                         'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
             syn_dict = {"synapse_model": "static_synapse",
-                        "weight": get_weight(self.network_params["syn_params"]["J_IE"], self.network_params["neur_params"]["tau"][1]),
+                        "weight": get_weight(self.network_params["syn_params"]["J_IE"], self.network_params["neur_params"]["tau"][0]),
                         "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1])}    
             nest.Connect(self.exc_populations[i], self.inh_population, con_dict, syn_dict)
 
@@ -1014,6 +1014,65 @@ class STDPModel:
 
         print("Done")    
     
+    def connect_populations_simple(self):
+
+        # definition of the weight and std for excitatory to excitatory synapses
+        J_EE_pA = get_weight(self.network_params["syn_params"]["J_b"], self.network_params["neur_params"]["tau"][0])
+        std_EE_pA = get_weight(self.network_params["syn_params"]["start_dist_weights"]["std"], self.network_params["neur_params"]["tau"][0])
+
+        # parameters for the starting weight distribution for excitatory to excitatory synapses
+        allow_dist = self.network_params["syn_params"]["start_dist_weights"]["allow"]
+        seed_truncnorm = np.random.seed(seed = self.simulation_params["master_seed"])
+        a = (0.0 - J_EE_pA) / std_EE_pA
+        b = np.inf
+
+        # definition of the weight for inhibitory to excitatory synapses
+        J_EI_pA = get_weight(-self.network_params["syn_params"]["J_EI"], self.network_params["neur_params"]["tau"][1])
+        # definition of the weight for excitatory to inhibitory synapses
+        J_IE_pA = get_weight(self.network_params["syn_params"]["J_IE"], self.network_params["neur_params"]["tau"][0])
+        # definition of the weight for inhibitory to inhibitory synapses
+        J_II_pA = get_weight(-self.network_params["syn_params"]["J_II"], self.network_params["neur_params"]["tau"][1])        
+
+        # connect for excitatory to excitatory synapses
+        con_dict = {'rule': 'fixed_indegree', 
+                    'indegree': int(self.c*self.network_params["N_exc"]),
+                    'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+                    
+        syn_dict = {"synapse_model": "stdp_synapse_rec",
+                    "tau_plus": self.network_params["stdp_params"]["tau_plus"],
+                    "lambda": self.network_params["stdp_params"]["lambda"],
+                    "alpha": self.network_params["stdp_params"]["alpha"],
+                    "mu_plus": self.network_params["stdp_params"]["mu_plus"],
+                    "mu_minus": self.network_params["stdp_params"]["mu_minus"],
+                    "Wmax": self.network_params["stdp_params"]["Wmax"],
+                    "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1]),
+                    "weight": [truncnorm.rvs(a=a, b=b, loc=J_EE_pA, scale=std_EE_pA, size=con_dict['indegree'], random_state=seed_truncnorm) for i in range(len(self.exc_population))] if allow_dist else J_EE_pA}
+        nest.Connect(self.exc_population, self.exc_population, con_dict, syn_dict)
+
+        # connect for inhibitory to excitatory synapses
+        con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.c*self.network_params["N_inh"]),
+                    'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+        syn_dict = {"synapse_model": "static_synapse",
+                    "weight": J_EI_pA,
+                    "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1])} 
+        nest.Connect(self.inh_population, self.exc_population, con_dict, syn_dict)
+
+        # connect for excitatory to inhibitory synapses
+        con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.c*self.network_params["N_exc"]),
+                    'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+        syn_dict = {"synapse_model": "static_synapse",
+                    "weight": J_IE_pA,
+                    "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1])} 
+        nest.Connect(self.exc_population, self.inh_population, con_dict, syn_dict)
+
+        # connect for inhibitory to inhibitory synapses
+        con_dict = {'rule': 'fixed_indegree', 'indegree': int(self.c*self.network_params["N_inh"]),
+                    'allow_autapses': self.network_params["syn_params"]["autapses"], 'allow_multapses': self.network_params["syn_params"]["multapses"]}
+        syn_dict = {"synapse_model": "static_synapse",
+                    "weight": J_II_pA,
+                    "delay": nest.random.uniform(min=self.network_params["syn_params"]["delay"][0], max=self.network_params["syn_params"]["delay"][1])} 
+        nest.Connect(self.inh_population, self.inh_population, con_dict, syn_dict)        
+
     def connect_external_inputs(self):
         """
         Creation of the connections between neurons and external inputs.
@@ -1146,7 +1205,7 @@ class STDPModel:
         t1 = time.time()
         print("Nodes created in {:.2} s.".format(t1-t0))
         print("Connecting nodes...")
-        self.connect_populations()
+        self.connect_populations_simple()
         self.connect_external_inputs()
         self.connect_recording_devices()
         t2 = time.time()

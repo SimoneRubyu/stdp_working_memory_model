@@ -48,11 +48,11 @@ network_p = {
     'eta_exc_end': eta_exc - eta_exc,
     # synaptic parameters
     'syn_params' : {'autapses' : True, 'multapses' : True,
-                    "J_b" : 0.10, "J_p" : 0.10, "J_IE" : 0.45, "J_EI" : 0.45, "J_II" : 0.45,
+                    "J_b" : 0.10, "J_p" : 0.10, "J_IE" : 0.135, "J_EI" : 0.25, "J_II" : 0.20,
                     "start_dist_weights" : {"allow" : True, "std": 0.01}},
     # STDP parameters
     'stdp_params' : {'tau_plus' : 20.0, 'tau_minus' : 20.0, 
-                     'lambda' : 0.1, 'alpha' : 0.4228,
+                     'lambda' : 0.005, 'alpha' : 1.188,
                      'mu_plus' : 0.4, 'mu_minus' : 1.0,
                      'Wmax' : 100.0},
     # item loading parameters
@@ -61,10 +61,10 @@ network_p = {
 # presimulation time (i.e. time in which the network stays in the spontaneous activity)
 tpresim = 3000.0
 # simulation time
-tsim = 25000.0
+tsim = 3000.0
 # tsim = 20000.0
 # time to stop stdp learning (in ms, if -1 stdp is active during the whole simulation)
-t_stop_stdp = -1
+t_stop_stdp = 0.0
 
 t_total = tpresim + tsim
 
