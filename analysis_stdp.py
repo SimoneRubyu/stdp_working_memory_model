@@ -233,7 +233,7 @@ def instantaneus_firing_rate(sr, binwidth = 25):
         
         h5 = np.histogram(fr5, bins=bins5)[0:2]
         # frequency in Hz per bin, nomalized
-        fr5 = (h5[0]/(binwidth/1000.0))/(network_params["N_exc"]*network_params["f"])
+        fr5 = (h5[0]/(binwidth/1000.0))/(network_params["N_exc"]*(1-network_params["f"]*5))
         # time of the center of each bin
         time5 = [(h5[1][i]+h5[1][i+1])/2.0 for i in range(len(h5[0]))]
     else:
@@ -310,7 +310,7 @@ def firing_rate(t_start, t_stop, sr):
     print("Start firing rate calculation at {} ms and stop at {} ms".format(t_start, t_stop))
     # neuron that emitted the spikes in that range
     senders = [i for (i, dum) in zip(SE[:,0], dum) if dum]
-    N_neurons_recorded = int(network_params["N_exc"]*network_params["f"]*simulation_params["recording_params"]["fraction_pop_recorded"])
+    N_neurons_recorded = len(set(SE[:,0]))
     ids = np.arange(np.min(senders), np.min(senders)+N_neurons_recorded)
     #print(len(ids))
     # count firing rate for each neuron
@@ -393,8 +393,8 @@ def plot_weights_histogram_combined(weights_dict, data_path="", num=""):
     
     ax.hist(all_weights, bins="auto", alpha=0.7, color='steelblue', edgecolor='black', label='All weights')
         
-    ax.axvline(17.04, color='blue', linestyle='dashed', linewidth=1.5, label="baseline weight")
-    ax.axvline(76.7, color='red', linestyle='dashed', linewidth=1.5, label="potentiated weight")
+    ax.axvline(5.38, color='blue', linestyle='dashed', linewidth=1.5, label="baseline weight")
+    ax.axvline(24.23, color='red', linestyle='dashed', linewidth=1.5, label="potentiated weight")
     
     ax.set_title("Global Synaptic Weights Distribution", fontsize=titlesize)
     ax.set_xlabel("Synaptic weight", fontsize=labelsize)
@@ -430,7 +430,8 @@ def plot_weights_histogram(weights_dict, data_path="", num = ""):
         ax = axes[i]
         
         ax.hist(weights, bins="auto", alpha=0.7, color='steelblue', edgecolor='black')
-        ax.axvline(17.04, color='blue', linestyle='dashed', linewidth=1.5, label="baseline weight")
+        ax.axvline(5.38, color='blue', linestyle='dashed', linewidth=1.5, label="baseline weight")
+        ax.axvline(24.23, color='red', linestyle='dashed', linewidth=1.5, label="potentiated weight")
         
         ax.set_title(connection, fontsize=titlesize)
         ax.set_xlabel("Synaptic weight", fontsize=labelsize)
@@ -473,7 +474,7 @@ plot_weights_histogram_combined(weight_dict_1, data_path, num="_1")
 # plt.show()
 
 start_time_after = 0.0
-stop_time_after = 28000.0
+stop_time_after = simulation_params["t_sim"]
 
 plot_instantaneus_firing_rate(srs)
 
@@ -487,7 +488,8 @@ firing_rates_dict_after = {
     "Inhibitory population": firing_rate(sr=sr6, t_start=start_time_after, t_stop=stop_time_after) if sr6 is not None else []
 }
 
-#plot_firing_rate_histogram(firing_rates_dict_after, data_path, filename="firing_rate_after")
+# plot_firing_rate_histogram(firing_rates_dict_after, data_path, filename="firing_rate_after")
+
 """
 firing_rates_dict_before = {
     "Selective population 0": firing_rate(sr=sr0, t_start=start_time_before, t_stop=stop_time_before),
