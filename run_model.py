@@ -14,6 +14,7 @@ parser.add_argument("--time_cue", type=float, default=350.0, help='Duration of t
 parser.add_argument("--learning_rate", type=float, default=0.1, help='Learning rate for STDP (default: 0.1).')
 parser.add_argument("--asymmetry", type=float, default=1.0, help='Asymmetry factor for STDP depression and potentiation (default: 1.0).')
 parser.add_argument("--mu", type=float, default=1.0, help='Exponent for weight dependence of STDP (default: 1.0).')
+parser.add_argument("--init_std", type=float, default=0.01, help='Initial standard deviation for synaptic weights (default: 0.01).')
 args = parser.parse_args()
 
 if args.path is None:
@@ -28,7 +29,7 @@ else:
 # Fig 2C - 24.1 (bi-stable activity with asynchronous spiking activity)
 
 # average variation of membrane potential elicited by external current [mV]
-eta_exc = 20.9
+eta_exc = 23.7
 # inhibitory input current [mV]
 eta_inh = 20.5
 # network params dict
@@ -48,20 +49,20 @@ network_p = {
     'eta_exc_end': eta_exc - eta_exc,
     # synaptic parameters
     'syn_params' : {'autapses' : True, 'multapses' : True,
-                    "J_b" : 0.0316, "J_p" : 0.0316, "J_IE" : 0.0885, "J_EI" : 0.0822, "J_II" : 0.0632,
-                    "start_dist_weights" : {"allow" : True, "std": 0.01}},
+                    "J_b" : 0.0225, "J_p" : 0.0225, "J_IE" : 0.135, "J_EI" : 0.25, "J_II" : 0.20,
+                    "start_dist_weights" : {"allow" : True, "std": 0.01225}},
     # STDP parameters
     'stdp_params' : {'tau_plus' : 20.0, 'tau_minus' : 20.0, 
-                     'lambda' : 0.05, 'alpha' : 1.188,  # 1.188
-                     'mu_plus' : 0.4, 'mu_minus' : 1.0,
-                     'Wmax' : 180.0},
+                     'lambda' : 0.01, 'alpha' : 1.0,  # 1.188
+                     'mu_plus' : 1.0, 'mu_minus' : 1.0,
+                     'Wmax' : 110.0},
     # item loading parameters
-    'stimulation_params' : {'T_cue' : 3000.0, 'A_cue' : 1.05 , "correlation_c": 1.0}}
+    'stimulation_params' : {"correlation_c": 1.0}}
 
 # presimulation time (i.e. time in which the network stays in the spontaneous activity)
 tpresim = 3000.0
 # simulation time
-tsim = 9000.0
+tsim = 12000.0
 # tsim = 20000.0
 # time to stop stdp learning (in ms, if -1 stdp is active during the whole simulation)
 t_stop_stdp = -1
@@ -84,11 +85,11 @@ simulation_p = {
     "eta_end_origin": t_total - 800.0,
     "recording_params" : {
         # fraction of neurons recorded for each selective population
-        "fraction_pop_recorded" : 1.0,
+        "fraction_pop_recorded" : 0.1,
         # fraction of neurons recorded for weight distribution
         "fraction_weights_recorded" : 0.02,
         # selective excitatory population recorded (0, ..., p-1)
-        "pop_recorded" : [0, 1, 2, 3, 4, 5, 6],
+        "pop_recorded" : [0, 1, 2, 3, 4],
         "spike_recording_params": {"start": 100.0},
         # save spike data to file
         "save_to_file" : True,
@@ -112,9 +113,10 @@ network.add_background_input(start=0.0, stop=t_total)
 #network.add_nonspecific_readout_signal(origin=[tpresim+1100.0])
 
 # to reproduce Figure 1B and 1C
-network.add_item_loading_signals(pop_id=[0],
-                                 origin=[3000.0],
-                                 t_stop=[5500.0])
+network.add_item_loading_signals(pop_id=[0, 1, 2],
+                                 origin=[3000.0, 7000.0, 11000.0],
+                                 t_stop=[3000.0, 3000.0, 3000.0],
+                                 A_cue=[1.20, 1.20, 1.20],)
 
 # add item loading signals with mip generator
 #network.add_item_loading_signals_mip(pop_id=[0], 
@@ -128,21 +130,21 @@ network.save_params()
 network.build_network()
 
 # save initial synaptic weights to file
-# network.save_weights(time=0.0)
+#network.save_weights(time=0)
 
 # simulate network
 network.simulate_network()
 
 # save data to file
-network.save_spike_data()
+#network.save_spike_data()
 
 # save final synaptic weights to file
-network.save_weights(time=t_total)
+#network.save_weights(time=t_total)
 
 # save network structure to file
-#network.save_network_structure()
+network.save_network_structure()
 
 # plots a raster plot of all the neurons recorded
-network.raster_plot()
+#network.raster_plot()
 
 # plt.show()

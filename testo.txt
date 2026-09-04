@@ -339,3 +339,11 @@ Ora si fa una simulazione in cui si potenziano tutti i pesi delle pop selettive
 NON FUNZIONA IL MODELLO STDP CON LA VECCHIA VERSIONE................................................
 NON FUNZIONA IL save_weights
 VABBE', LA PROSSIMA VOLTA
+
+--------------------------------------------------------------
+PARAMETRI STMOLO
+
+network.add_item_loading_signals(pop_id=[0, 1, 2],
+                                 origin=[3000.0, 7000.0, 11000.0],
+                                 t_stop=[3000.0, 3000.0, 3000.0],
+                                 A_cue=[1.20, 1.20, 1.20],)

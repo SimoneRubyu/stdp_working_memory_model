@@ -1,0 +1,17 @@
+
+Finestre usate:
+  spontanea pre-stimolo : [0, 6000) ms
+  stimolo               : [6000, 9000) ms
+  spontanea post-stimolo: [9000, 15000) ms
+
+Firing rate on [0.0, 6000.0) ms | 400 neurons | mean 0.45 Hz | median 0.50 Hz | max 1.50 Hz | silent 28
+Firing rate on [9000.0, 15000.0) ms | 400 neurons | mean 0.61 Hz | median 0.67 Hz | max 1.83 Hz | silent 12
+
+Differenza di firing rate (dopo - prima), popolazione 0:
+  media   : +0.154 Hz
+  mediana : +0.167 Hz
+  std     : 0.403 Hz
+  frazione di neuroni con delta > 0: 57.2%
+  rate medio prima: 0.454 Hz | dopo: 0.608 Hz
+
+Figura salvata in /home/rubiu/stdp_working_memory_model/data_mu1_alpha1//fig2_stdp.png

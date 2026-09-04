@@ -1,0 +1,135 @@
+Pesi iniziali letti da weights_0.dat
+
+Mean for selective_pop0 recurrent weights: 14.0067
+
+
+Standard deviation for selective_pop0 recurrent weights: 3.2352
+
+
+Standard deviation normalized for selective_pop0 recurrent weights: 0.2310
+
+
+Skewness for selective_pop0 recurrent weights: 1.0823
+
+
+Kurtosis for selective_pop0 recurrent weights: 9.2983
+
+
+Mean for selective_pop1 recurrent weights: 4.0244
+
+
+Standard deviation for selective_pop1 recurrent weights: 1.9476
+
+
+Standard deviation normalized for selective_pop1 recurrent weights: 0.4840
+
+
+Skewness for selective_pop1 recurrent weights: 0.4315
+
+
+Kurtosis for selective_pop1 recurrent weights: 0.4350
+
+
+Mean for selective_pop2 recurrent weights: 4.0120
+
+
+Standard deviation for selective_pop2 recurrent weights: 1.9241
+
+
+Standard deviation normalized for selective_pop2 recurrent weights: 0.4796
+
+
+Skewness for selective_pop2 recurrent weights: 0.2592
+
+
+Kurtosis for selective_pop2 recurrent weights: -0.0229
+
+
+Mean for selective_pop3 recurrent weights: 4.0366
+
+
+Standard deviation for selective_pop3 recurrent weights: 1.9866
+
+
+Standard deviation normalized for selective_pop3 recurrent weights: 0.4922
+
+
+Skewness for selective_pop3 recurrent weights: 0.2707
+
+
+Kurtosis for selective_pop3 recurrent weights: -0.2420
+
+
+Mean for selective_pop4 recurrent weights: 4.0770
+
+
+Standard deviation for selective_pop4 recurrent weights: 1.9321
+
+
+Standard deviation normalized for selective_pop4 recurrent weights: 0.4739
+
+
+Skewness for selective_pop4 recurrent weights: 0.3366
+
+
+Kurtosis for selective_pop4 recurrent weights: 0.0209
+
+
+Mean for nonselective_pop recurrent weights: 4.0392
+
+
+Standard deviation for nonselective_pop recurrent weights: 1.9375
+
+
+Standard deviation normalized for nonselective_pop recurrent weights: 0.4797
+
+
+Skewness for nonselective_pop recurrent weights: 0.2919
+
+
+Kurtosis for nonselective_pop recurrent weights: -0.1768
+
+Firing rate on [0, 6000.0) ms | 400 neurons | mean 0.45 Hz | median 0.50 Hz | max 1.33 Hz | silent 27
+Firing rate on [0, 6000.0) ms | 400 neurons | mean 0.45 Hz | median 0.50 Hz | max 1.50 Hz | silent 15
+Firing rate on [0, 6000.0) ms | 400 neurons | mean 0.44 Hz | median 0.33 Hz | max 1.17 Hz | silent 35
+Firing rate on [0, 6000.0) ms | 400 neurons | mean 0.46 Hz | median 0.50 Hz | max 1.33 Hz | silent 11
+Firing rate on [0, 6000.0) ms | 400 neurons | mean 0.45 Hz | median 0.50 Hz | max 1.33 Hz | silent 24
+Firing rate on [0, 6000.0) ms | 2000 neurons | mean 0.46 Hz | median 0.50 Hz | max 1.50 Hz | silent 114
+Firing rate on [0, 6000.0) ms | 1000 neurons | mean 3.61 Hz | median 3.67 Hz | max 5.50 Hz | silent 0
+
+population                        N     mean   median      std      max   silent
+Selective population 0          400    0.452    0.500    0.266    1.333     6.8%
+Selective population 1          400    0.452    0.500    0.254    1.500     3.8%
+Selective population 2          400    0.437    0.333    0.277    1.167     8.8%
+Selective population 3          400    0.458    0.500    0.258    1.333     2.8%
+Selective population 4          400    0.453    0.500    0.272    1.333     6.0%
+Non selective population       2000    0.456    0.500    0.266    1.500     5.7%
+Inhibitory population          1000    3.614    3.667    0.674    5.500     0.0%
+Firing rate on [9000.0, 15000.0) ms | 400 neurons | mean 0.58 Hz | median 0.50 Hz | max 1.50 Hz | silent 15
+Firing rate on [9000.0, 15000.0) ms | 400 neurons | mean 0.45 Hz | median 0.50 Hz | max 1.50 Hz | silent 27
+Firing rate on [9000.0, 15000.0) ms | 400 neurons | mean 0.44 Hz | median 0.33 Hz | max 1.33 Hz | silent 25
+Firing rate on [9000.0, 15000.0) ms | 400 neurons | mean 0.47 Hz | median 0.50 Hz | max 1.50 Hz | silent 26
+Firing rate on [9000.0, 15000.0) ms | 400 neurons | mean 0.44 Hz | median 0.33 Hz | max 1.17 Hz | silent 26
+Firing rate on [9000.0, 15000.0) ms | 2000 neurons | mean 0.45 Hz | median 0.50 Hz | max 1.67 Hz | silent 127
+Firing rate on [9000.0, 15000.0) ms | 1000 neurons | mean 3.68 Hz | median 3.67 Hz | max 6.17 Hz | silent 0
+
+population                        N     mean   median      std      max   silent
+Selective population 0          400    0.579    0.500    0.292    1.500     3.8%
+Selective population 1          400    0.449    0.500    0.268    1.500     6.8%
+Selective population 2          400    0.438    0.333    0.260    1.333     6.2%
+Selective population 3          400    0.469    0.500    0.282    1.500     6.5%
+Selective population 4          400    0.439    0.333    0.266    1.167     6.5%
+Non selective population       2000    0.451    0.500    0.269    1.667     6.3%
+Inhibitory population          1000    3.684    3.667    0.725    6.167     0.0%
+Firing rate on [0, 6000.0) ms | 4000 neurons | mean 0.45 Hz | median 0.50 Hz | max 1.50 Hz | silent 226
+Firing rate on [0, 6000.0) ms | 1000 neurons | mean 3.61 Hz | median 3.67 Hz | max 5.50 Hz | silent 0
+
+population                        N     mean   median      std      max   silent
+Excitatory populations         4000    0.453    0.500    0.266    1.500     5.7%
+Inhibitory population          1000    3.614    3.667    0.674    5.500     0.0%
+Firing rate on [9000.0, 15000.0) ms | 4000 neurons | mean 0.46 Hz | median 0.50 Hz | max 1.67 Hz | silent 246
+Firing rate on [9000.0, 15000.0) ms | 1000 neurons | mean 3.68 Hz | median 3.67 Hz | max 6.17 Hz | silent 0
+
+population                        N     mean   median      std      max   silent
+Excitatory populations         4000    0.463    0.500    0.274    1.667     6.2%
+Inhibitory population          1000    3.684    3.667    0.725    6.167     0.0%

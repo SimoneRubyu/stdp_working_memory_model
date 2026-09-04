@@ -6,6 +6,8 @@ import math
 import sys
 import pandas as pd
 from argparse import ArgumentParser
+from statsmodels.tsa.stattools import adfuller, kpss
+
 
 parser = ArgumentParser()
 parser.add_argument("--path", type=str, default='data/', help='Path to the data directory (default: data/).')
@@ -393,8 +395,8 @@ def plot_weights_histogram_combined(weights_dict, data_path="", num=""):
     
     ax.hist(all_weights, bins="auto", alpha=0.7, color='steelblue', edgecolor='black', label='All weights')
         
-    ax.axvline(5.38, color='blue', linestyle='dashed', linewidth=1.5, label="baseline weight")
-    ax.axvline(24.23, color='red', linestyle='dashed', linewidth=1.5, label="potentiated weight")
+    ax.axvline(17, color='blue', linestyle='dashed', linewidth=1.5, label="baseline weight")
+    ax.axvline(77, color='red', linestyle='dashed', linewidth=1.5, label="potentiated weight")
     
     ax.set_title("Global Synaptic Weights Distribution", fontsize=titlesize)
     ax.set_xlabel("Synaptic weight", fontsize=labelsize)
@@ -430,8 +432,8 @@ def plot_weights_histogram(weights_dict, data_path="", num = ""):
         ax = axes[i]
         
         ax.hist(weights, bins="auto", alpha=0.7, color='steelblue', edgecolor='black')
-        ax.axvline(5.38, color='blue', linestyle='dashed', linewidth=1.5, label="baseline weight")
-        ax.axvline(24.23, color='red', linestyle='dashed', linewidth=1.5, label="potentiated weight")
+        ax.axvline(17, color='blue', linestyle='dashed', linewidth=1.5, label="baseline weight")
+        ax.axvline(77, color='red', linestyle='dashed', linewidth=1.5, label="potentiated weight")
         
         ax.set_title(connection, fontsize=titlesize)
         ax.set_xlabel("Synaptic weight", fontsize=labelsize)
@@ -478,6 +480,7 @@ stop_time_after = simulation_params["t_sim"]
 
 plot_instantaneus_firing_rate(srs)
 
+"""
 firing_rates_dict_after = {
     "Selective population 0": firing_rate(sr=sr0, t_start=start_time_after, t_stop=stop_time_after),
     "Selective population 1": firing_rate(sr=sr1, t_start=start_time_after, t_stop=stop_time_after),
@@ -487,8 +490,15 @@ firing_rates_dict_after = {
     "Non selective population": firing_rate(sr=sr5, t_start=start_time_after, t_stop=stop_time_after) if sr5 is not None else [],
     "Inhibitory population": firing_rate(sr=sr6, t_start=start_time_after, t_stop=stop_time_after) if sr6 is not None else []
 }
+"""
+sr_excitatory = np.concatenate([sr0, sr1, sr2, sr3, sr4, sr5]) if sr5 is not None else np.concatenate([sr0, sr1, sr2, sr3, sr4])
 
-# plot_firing_rate_histogram(firing_rates_dict_after, data_path, filename="firing_rate_after")
+firing_rates_dict_after = {
+    "Excitatory populations": firing_rate(sr=sr_excitatory, t_start=start_time_after, t_stop=stop_time_after),
+    "Inhibitory population": firing_rate(sr=sr6, t_start=start_time_after, t_stop=stop_time_after) if sr6 is not None else []
+}
+
+plot_firing_rate_histogram(firing_rates_dict_after, data_path, filename="firing_rate_after")
 
 """
 firing_rates_dict_before = {

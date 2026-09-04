@@ -297,7 +297,7 @@ class STDPModel:
         self.network_params.update({'background_input': background_input})
 
 
-    def add_item_loading_signals(self, pop_id:list=[0], origin:list=[0.0], t_stop:list=[0.0]):
+    def add_item_loading_signals(self, pop_id:list=[0], origin:list=[0.0], t_stop:list=[0.0], A_cue:list=[0.0]):
         """
         Add item loading signal to the pop_id-th excitatory population using the parameters previously given.
 
@@ -317,7 +317,8 @@ class STDPModel:
 
         else:
             item_loading = {
-                'nstim': len(pop_id) ,
+                'nstim': len(pop_id),
+                'A_cue': A_cue,
                 'pop_id': pop_id,
                 'origin': origin,
                 'stop' : t_stop
@@ -457,9 +458,9 @@ class STDPModel:
                               "local_num_threads": self.simulation_params["threads"]})
         
         # create the weight recorder to record the synaptic weights of the STDP synapses
-        wr = nest.Create("weight_recorder")
+        self.wr = nest.Create("weight_recorder")
         synapse_model_name = "stdp_synapse"
-        synapse_defaults = { "weight_recorder": wr}
+        synapse_defaults = { "weight_recorder": self.wr}
         nest.CopyModel(synapse_model_name, "stdp_synapse_rec", synapse_defaults)
 
     
@@ -619,10 +620,11 @@ class STDPModel:
         Sigma_exc = 0.0 #self.network_params["Sigma_exc"] #0.0
         origin = self.network_params["item_loading"]["origin"]
         t_stop = self.network_params["item_loading"]["stop"]
+        A_cue = self.network_params["item_loading"]["A_cue"]
 
         for item in range(self.network_params["item_loading"]["nstim"]):
-            cue, std_cue = noise_params(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0], dt=self.network_params["stimulation_params"]["dt_external_stim"])
-            rate_cue, _ = get_rate_and_weight_poisson(eta_exc*(self.network_params["stimulation_params"]["A_cue"]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
+            cue, std_cue = noise_params(eta_exc*(A_cue[item]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0], dt=self.network_params["stimulation_params"]["dt_external_stim"])
+            rate_cue, _ = get_rate_and_weight_poisson(eta_exc*(A_cue[item]-1.0), Sigma_exc, self.network_params["neur_params"]["tau"][0])
             if(self.network_params["poisson_bkg"]["allow"]):
                 print("Item loading signal {}: rate {} Hz".format(item, rate_cue))
                 I_cue = nest.Create("poisson_generator")
@@ -1023,6 +1025,11 @@ class STDPModel:
         J_EE_pA = get_weight(self.network_params["syn_params"]["J_b"], self.network_params["neur_params"]["tau"][0])
         std_EE_pA = get_weight(self.network_params["syn_params"]["start_dist_weights"]["std"], self.network_params["neur_params"]["tau"][0])
 
+        print("J base pA=", J_EE_pA)
+        print("Std base pA=", std_EE_pA)
+
+        print("J pot", get_weight(0.45*0.90*0.25, self.network_params["neur_params"]["tau"][0]))
+
         # parameters for the starting weight distribution for excitatory to excitatory synapses
         allow_dist = self.network_params["syn_params"]["start_dist_weights"]["allow"]
         seed_truncnorm = np.random.seed(seed = self.simulation_params["master_seed"])
@@ -1228,6 +1235,10 @@ class STDPModel:
         last_spikes = np.zeros(len(self.spike_recorders))
         stop_sim = False
         n_neurons = (self.simulation_params["recording_params"]["fraction_pop_recorded"] * self.network_params["N_exc"] * self.network_params["f"])
+
+        if stop_t_cue == 0:
+            self.stop_stdp()
+            stop_t_cue = -1
 
         print("\n### NETWORK SIMULATION ###")
 
